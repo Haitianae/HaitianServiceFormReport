@@ -4663,25 +4663,25 @@ export default function FormComponent({ onLogout, user }) {
       const customerCanvasEmpty = editSigCustomer.current?.isEmpty?.();
       const managerEmpty = !editSignatureManager;
 
-      // if (
-      //   !isEditTechnicianSignSaved ||
-      //   technicianCanvasEmpty ||
-      //   !isEditCustomerSignSaved ||
-      //   customerCanvasEmpty ||
-      //   !isEditManagerSignSaved ||
-      //   managerEmpty
-      // ) {
-      //   notification.error({
-      //     message: "Error",
-      //     description:
-      //       "The manager's signature must be uploaded. The technician's and customer's signatures must be saved before submitting.",
-      //     placement: "bottomRight",
-      //   });
+      if (
+        !isEditTechnicianSignSaved ||
+        technicianCanvasEmpty ||
+        !isEditCustomerSignSaved ||
+        customerCanvasEmpty ||
+        !isEditManagerSignSaved ||
+        managerEmpty
+      ) {
+        notification.error({
+          message: "Error",
+          description:
+            "The manager's signature must be uploaded. The technician's and customer's signatures must be saved before submitting.",
+          placement: "bottomRight",
+        });
 
-      //   setIsEditSubmitting(false);
-      //   setEditLoading(false);
-      //   return;
-      // }
+        setIsEditSubmitting(false);
+        setEditLoading(false);
+        return;
+      }
 
       const formatDate = (dateStr) => {
         // Check if the string matches DD-MM-YYYY format
@@ -4860,7 +4860,7 @@ export default function FormComponent({ onLogout, user }) {
         },
       };
 
-      // await generateEditPDF(pdfPayload, checkboxValues, cleanedPartsUsed);
+      await generateEditPDF(pdfPayload, checkboxValues, cleanedPartsUsed);
 
       // ✅ Reset
       setEditModalOpen(false);
