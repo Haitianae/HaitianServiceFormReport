@@ -4376,7 +4376,18 @@ export default function FormComponent({ onLogout, user }) {
       // console.log("Departure Date (final):", departureDate);
       // console.log("Return Date (final):", returnDate);
 
-      if ([installationDate, departureDate, returnDate].includes("N/A")) {
+      // if ([installationDate, departureDate, returnDate].includes("N/A")) {
+      //   notification.error({
+      //     message: "Error",
+      //     description: "Please enter valid dates in DD-MM-YYYY format.",
+      //     placement: "bottomRight",
+      //   });
+      //   stopSubmitting();
+
+      //   return;
+      // }
+
+            if ([departureDate, returnDate].includes("N/A")) {
         notification.error({
           message: "Error",
           description: "Please enter valid dates in DD-MM-YYYY format.",
@@ -5411,10 +5422,10 @@ export default function FormComponent({ onLogout, user }) {
                         label="Installation Date"
                         name="installationDate"
                         rules={[
-                          {
-                            required: true,
-                            message: "Please enter installation date",
-                          },
+                          // {
+                          //   required: true,
+                          //   message: "Please enter installation date",
+                          // },
                           {
                             pattern:
                               /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/,
@@ -6232,10 +6243,10 @@ export default function FormComponent({ onLogout, user }) {
                       label="Installation Date"
                       name="installationDate"
                       rules={[
-                        {
-                          required: true,
-                          message: "Please enter installation date",
-                        },
+                        // {
+                        //   required: true,
+                        //   message: "Please enter installation date",
+                        // },
                         {
                           pattern:
                             /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/,
