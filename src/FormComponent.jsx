@@ -19,9 +19,13 @@ import {
   Modal,
   Descriptions,
   Popconfirm,
-  Searc,
   notification,
+  Avatar,
+  Dropdown,
+  Menu,
 } from "antd";
+import { UserOutlined, MailOutlined, LogoutOutlined } from "@ant-design/icons";
+
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -35,6 +39,7 @@ import {
   ExportOutlined,
   FilterOutlined,
   DownloadOutlined,
+  ClearOutlined,
 } from "@ant-design/icons";
 import SignatureCanvas from "react-signature-canvas";
 import jsPDF from "jspdf";
@@ -49,14 +54,15 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import isBetween from "dayjs/plugin/isBetween";
-// import * as XLSX from "xlsx";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx-js-style";
+import { FOCUSABLE_SELECTOR } from "@testing-library/user-event/dist/utils";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(isBetween);
-
+dayjs.extend(customParseFormat);
 // message.config({
 //   duration: 3,
 //   maxCount: 3,
@@ -85,6 +91,7 @@ const technicianOptions = [
   "Balaji",
   "Eswar",
   "SivaSundar",
+  "Sunderesh",
 ];
 
 const serviceOptions = [
@@ -98,7 +105,7 @@ const serviceOptions = [
   "Goodwill",
 ];
 
-export default function FormComponent() {
+export default function FormComponent({ onLogout, user }) {
   const [form] = Form.useForm();
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -118,10 +125,10 @@ export default function FormComponent() {
   const [editsrn, setEditSRN] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [tooltipVisibility, setTooltipVisibility] = useState({});
-
   const isSubmittingRef = useRef(false);
   const [customerOptions, setCustomerOptions] = useState([]);
-  const [customerDataList, setCustomerDataList] = useState([]); // full objects
+  const [customerDataList, setCustomerDataList] = useState([]);
+  const [reportDataList, setReportDataList] = useState([]);
   const [inputCustomer, setInputCustomer] = useState("");
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -163,6 +170,204 @@ export default function FormComponent() {
   const [isCustomerSignSaved, setIsCustomerSignSaved] = useState(false);
   const [isManagerSignUploaded, setIsManagerSignUploaded] = useState(false);
   const [selectedEditTechnicians, setSelectedEditTechnicians] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [machineRegistryLoading, setMachineRegistryLoading] = useState(false);
+  const [startTime, setStartTime] = useState(null);
+  const [endTime, setEndTime] = useState(null);
+  const [duration, setDuration] = useState(null);
+  const [selectedTimezone, setSelectedTimezone] = useState("Asia/Dubai");
+  const [downloadLoader, setDownloadLoader] = useState(false);
+
+
+  const GAS_URL =
+    "https://script.google.com/macros/s/AKfycbzhiNMaS6DJJIe-ifyKELGwhtGPjIeyvTjSI54A52BfUc0V9uVmApNP1Epdtgmqx7maIA/exec";
+
+  const machineRegistryColumns = [
+    { title: "Serial Number", dataIndex: "Serial Number" },
+    { title: "Service Request Number", dataIndex: "Service Request Number" },
+    { title: "Machine Serial Number", dataIndex: "Machine Serial Number" },
+    { title: "Customer Name", dataIndex: "Customer Name" },
+    { title: "Machine Type", dataIndex: "Machine Type" },
+  ];
+  const [machineRegistryData, setMachineRegistryData] = useState([]);
+  const [registrySearch, setRegistrySearch] = useState("");
+  const [registrySRNSearch, setRegistrySRNSearch] = useState("");
+
+  // const machineRegistryDataFiltered = (machineRegistryData || []).filter(
+  //   (item) => {
+  //     const searchLower = registrySearch.toLowerCase();
+
+  //     return Object.values(item).some((val) =>
+  //       val?.toString().toLowerCase().includes(searchLower)
+  //     );
+  //   }
+  // );
+
+  const machineRegistryDataFiltered = (machineRegistryData || []).filter(
+    (item) => {
+      // 1. General search
+      const searchLower = registrySearch.toLowerCase();
+      const matchesGeneral = Object.values(item).some((val) =>
+        val?.toString().toLowerCase().includes(searchLower)
+      );
+
+      // 2. SRN-specific search
+      const srnLower = registrySRNSearch.toLowerCase();
+      const matchesSRN = srnLower
+        ? String(item["Service Request Number"] || "").toLowerCase() ===
+          srnLower
+        : true;
+
+      // ✅ Row must match both filters
+      return matchesGeneral && matchesSRN;
+    }
+  );
+
+  useEffect(() => {
+    fetch(`${GAS_URL}?action=getAllMachineRegistry`)
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.success) {
+          const sorted = (result.machines || []).sort((a, b) => {
+            // If "Serial Number" is numeric
+            return Number(b["Serial Number"]) - Number(a["Serial Number"]);
+          });
+          setMachineRegistryData(sorted);
+        } else {
+          setMachineRegistryData([]);
+        }
+      })
+      .catch(() => setMachineRegistryData([]));
+  }, []);
+
+  const handleFirstInput = () => {
+    if (!startTime) {
+      const now = dayjs(); // system time
+      setStartTime(now.format("DD-MM-YYYY HH:mm:ss"));
+    }
+  };
+
+  const handleRegistryRefresh = () => {
+    setMachineRegistryLoading(true); // show loading in table
+
+    fetch(`${GAS_URL}?action=getAllMachineRegistry`)
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.success) {
+          const sorted = (result.machines || []).sort(
+            (a, b) => Number(b["Serial Number"]) - Number(a["Serial Number"])
+          );
+
+          setMachineRegistryData(sorted);
+
+          notification.success({
+            message: "Success",
+            description: "Machine Registry refreshed successfully",
+            placement: "bottomRight",
+          });
+        } else {
+          notification.error({
+            message: "Error",
+            description: "Failed to refresh Machine Registry",
+            placement: "bottomRight",
+          });
+        }
+      })
+      .catch((err) => {
+        // console.error("Failed to fetch Machine Registry data:", err);
+        notification.error({
+          message: "Error",
+          description: "Error fetching Machine Registry data",
+          placement: "bottomRight",
+        });
+      })
+      .finally(() => {
+        setMachineRegistryLoading(false); // hide loading
+      });
+  };
+
+  const exportMachineRegistryToExcel = (data) => {
+    if (!data || !data.length) {
+      notification.warning({
+        message: "Warning",
+        description: "No machine registry data available for export",
+        placement: "bottomRight",
+      });
+      return;
+    }
+
+    const headers = Object.keys(data[0]);
+    const rows = data.map((row) => headers.map((h) => row[h]));
+
+    // Build worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+    // Define border style
+    const fullBorder = {
+      top: { style: "thin", color: { rgb: "000000" } },
+      bottom: { style: "thin", color: { rgb: "000000" } },
+      left: { style: "thin", color: { rgb: "000000" } },
+      right: { style: "thin", color: { rgb: "000000" } },
+    };
+
+    // Style header row
+    headers.forEach((_, c) => {
+      const cellAddr = XLSX.utils.encode_cell({ r: 0, c });
+      worksheet[cellAddr].s = {
+        font: { bold: true, color: { rgb: "000000" } },
+        fill: { fgColor: { rgb: "FFFF00" } }, // yellow
+        alignment: { horizontal: "center", vertical: "center" },
+        border: fullBorder,
+      };
+    });
+
+    // Style all data cells
+    rows.forEach((row, r) => {
+      row.forEach((_, c) => {
+        const cellAddr = XLSX.utils.encode_cell({ r: r + 1, c });
+        if (!worksheet[cellAddr]) worksheet[cellAddr] = { t: "s", v: "" }; // ensure cell exists
+        worksheet[cellAddr].s = {
+          alignment: { horizontal: "left", vertical: "center" },
+          border: fullBorder,
+        };
+      });
+    });
+
+    // Auto column widths
+    worksheet["!cols"] = headers.map((h, i) => {
+      const maxLen = Math.max(
+        h.length,
+        ...rows.map((r) => (r[i] ? r[i].toString().length : 0))
+      );
+      return { wch: maxLen + 2 };
+    });
+
+    // Create workbook and export
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Machine Registry");
+    XLSX.writeFile(workbook, "Machine_Registry.xlsx");
+  };
+
+  const clearRegistrySearch = () => {
+    if (!registrySearch && !registrySRNSearch) {
+      notification.info({
+        message: "No Input",
+        description: "No search input found",
+        placement: "bottomRight",
+      });
+      return;
+    }
+
+    setRegistrySearch("");
+    setRegistrySRNSearch("");
+
+    notification.success({
+      message: "Success",
+      description: "Registry search inputs cleared",
+      placement: "bottomRight",
+    });
+  };
+
   const [isEditImageMarkedForDeletion, setIsEditImageMarkedForDeletion] =
     useState(false);
   const [data, setData] = useState([
@@ -227,7 +432,8 @@ export default function FormComponent() {
       payload.append("originalFilename", file.name);
 
       const res = await fetch(
-        "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+        // "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+        GAS_URL,
         {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -256,21 +462,9 @@ export default function FormComponent() {
         .join("\n")
         .trim()
     );
-
-    // ✅ Do NOT touch editTableData here
   };
 
-  const parseDate = (dateStr) => {
-    if (!dateStr || dateStr === "N/A") return null;
-
-    const parsed = dayjs(
-      dateStr,
-      ["DD-MM-YYYY", "DD MMM YYYY", "YYYY-MM-DD", dayjs.ISO_8601],
-      true
-    );
-
-    return parsed.isValid() ? parsed : null;
-  };
+  const parseDate = (dateStr) => dateStr || "";
 
   const handleRemoveCauseImage = () => {
     setCauseOfFailureImage(null);
@@ -289,7 +483,7 @@ export default function FormComponent() {
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       e.preventDefault();
-      e.returnValue = ""; // Required for Chrome
+      e.returnValue = "";
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -301,7 +495,7 @@ export default function FormComponent() {
 
   const handleEditImageDelete = () => {
     // message.info("Image marked for deletion. It will be removed after record is updated.");
-    setIsEditImageMarkedForDeletion(true); // ✅ Mark only
+    setIsEditImageMarkedForDeletion(true);
 
     // Don't clear editViewUrl — it's needed for backend deletion
     setEditCauseOfFailureImage(null);
@@ -341,22 +535,11 @@ export default function FormComponent() {
     }
   };
 
-  // const clearEditTechnicianSignature = () => {
-  //   editSigTechnician.current?.clear();
-  //   setEditSignatureTechnician("");
-  //   notification.success({
-  //     message: "Success",
-  //     description: "Technician signature was cleared (edit).",
-  //     placement: "bottomRight",
-  //   });
-  //   setIsEditTechnicianSignSaved(false);
-  // };
-
   const clearEditTechnicianSignature = () => {
-   if (editSigTechnician.current && !editSigTechnician.current.isEmpty()) {
+    if (editSigTechnician.current && !editSigTechnician.current.isEmpty()) {
       editSigTechnician.current?.clear();
-    setEditSignatureTechnician("");
-     setIsEditTechnicianSignSaved(false);
+      setEditSignatureTechnician("");
+      setIsEditTechnicianSignSaved(false);
 
       notification.success({
         message: "Success",
@@ -370,9 +553,7 @@ export default function FormComponent() {
         placement: "bottomRight",
       });
     }
-
   };
-
 
   const saveEditCustomerSignature = () => {
     if (editSigCustomer.current && !editSigCustomer.current.isEmpty()) {
@@ -396,19 +577,8 @@ export default function FormComponent() {
     }
   };
 
-  // const clearEditCustomerSignature = () => {
-  //   editSigCustomer.current?.clear();
-  //   setEditSignatureCustomer("");
-  //   notification.success({
-  //     message: "Success",
-  //     description: "Customer signature was cleared (edit).",
-  //     placement: "bottomRight",
-  //   });
-  //   setIsEditCustomerSignSaved(false);
-  // };
-
-const clearEditCustomerSignature = () => {
-   if (editSigCustomer.current && !editSigCustomer.current.isEmpty()) {
+  const clearEditCustomerSignature = () => {
+    if (editSigCustomer.current && !editSigCustomer.current.isEmpty()) {
       editSigCustomer.current.clear();
       setEditSignatureCustomer("");
       setIsEditCustomerSignSaved(false);
@@ -425,9 +595,7 @@ const clearEditCustomerSignature = () => {
         placement: "bottomRight",
       });
     }
-
   };
-
 
   const handleEditManagerUpload = ({ file }) => {
     const reader = new FileReader();
@@ -501,7 +669,8 @@ const clearEditCustomerSignature = () => {
     formData.append("causeImage", causeOfFailureImage);
 
     const res = await fetch(
-      "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      // "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      GAS_URL,
       {
         method: "POST",
         body: formData,
@@ -551,24 +720,7 @@ const clearEditCustomerSignature = () => {
         (option) => selectedRecord[option] === "Yes"
       );
 
-      // const parseDate = (dateStr) => {
-      //   return dayjs(
-      //     dateStr,
-      //     ["DD-MM-YYYY", "DD MMM YYYY", "YYYY-MM-DD", dayjs.ISO_8601],
-      //     true
-      //   );
-      // };
-      const parseDate = (dateStr) => {
-        if (!dateStr || dateStr === "N/A") return null;
-
-        const parsed = dayjs(
-          dateStr,
-          ["DD-MM-YYYY", "DD MMM YYYY", "YYYY-MM-DD", dayjs.ISO_8601],
-          true
-        );
-
-        return parsed.isValid() ? parsed : null;
-      };
+      const parseDate = (dateStr) => dateStr || "";
 
       // const fullCause = selectedRecord["Cause of Failure"] || "";
 
@@ -605,12 +757,7 @@ const clearEditCustomerSignature = () => {
         installationDate: selectedRecord["Installation Date"]
           ? parseDate(selectedRecord["Installation Date"])
           : null,
-        // departureDate: selectedRecord["Departure Date"]
-        //   ? dayjs(selectedRecord["Departure Date"], "DD-MM-YYYY")
-        //   : null,
-        // returnDate: selectedRecord["Return Date"]
-        //   ? dayjs(selectedRecord["Return Date"])
-        //   : null,
+
         departureDate: selectedRecord["Departure Date"]
           ? parseDate(selectedRecord["Departure Date"])
           : null,
@@ -638,7 +785,7 @@ const clearEditCustomerSignature = () => {
 
         partNumber: part.partNumber ?? "",
         description: part.description ?? "",
-        quantity: part.quantity ?? 1,
+        quantity: part.quantity ?? "",
         note: part.note ?? "",
       }));
 
@@ -656,7 +803,6 @@ const clearEditCustomerSignature = () => {
             ]
       );
     }
-    // console.log("Selected Record:", selectedRecord);
   }, [selectedRecord, viewModalOpen]);
   const extractDriveImagePreviewUrl = (text) => {
     const match = text.match(
@@ -736,14 +882,7 @@ const clearEditCustomerSignature = () => {
       (option) => selectedRecord[option] === "Yes"
     );
 
-    const parseDate = (dateStr) =>
-      dateStr
-        ? dayjs(
-            dateStr,
-            ["DD-MM-YYYY", "DD MMM YYYY", "YYYY-MM-DD", dayjs.ISO_8601],
-            true
-          )
-        : null;
+    const parseDate = (dateStr) => dateStr || "";
 
     const initialTechnicians = Array.isArray(
       selectedRecord["Service Technician"]
@@ -807,13 +946,12 @@ const clearEditCustomerSignature = () => {
     setEditCauseOfFailureImage(filename ? { name: filename } : null);
     setDownloadUrl(downloadUrl);
 
-    // ✅ Only initialize editTableData ONCE
     const partRows = (selectedRecord.partsUsed || []).map((part, index) => ({
       // key: Date.now() + index,
       key: `${Date.now()}-${index}`,
       partNumber: part.partNumber ?? "",
       description: part.description ?? "",
-      quantity: part.quantity ?? 1,
+      quantity: part.quantity ?? "",
       note: part.note ?? "",
     }));
     setEditTableData(partRows);
@@ -835,9 +973,11 @@ const clearEditCustomerSignature = () => {
   }, []);
 
   const loadAllCustomerData = async () => {
-    const res = await fetch(
-      "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec?action=getAllCustomerData"
-    );
+    // const res = await fetch(
+    //   "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec?action=getAllCustomerData"
+    // );
+    const res = await fetch(`${GAS_URL}?action=getAllCustomerData`);
+
     const result = await res.json();
 
     if (result.success && Array.isArray(result.customers)) {
@@ -866,6 +1006,7 @@ const clearEditCustomerSignature = () => {
 
       setRawCustomerData(finalData);
       setCustomerDataList(finalData);
+      setReportDataList(finalData);
       setFilteredData(finalData);
 
       // ✅ Prevent overwriting selectedRecord while modal is open
@@ -903,24 +1044,24 @@ const clearEditCustomerSignature = () => {
       });
     }
 
-    if (searchInstallationDate) {
-      const searchDate = dayjs(
-        searchInstallationDate,
-        ["DD-MM-YYYY", "YYYY-MM-DD"],
-        true
-      );
+    // if (searchInstallationDate) {
+    //   const searchDate = dayjs(
+    //     searchInstallationDate,
+    //     ["DD-MM-YYYY", "YYYY-MM-DD"],
+    //     true
+    //   );
 
-      filtered = filtered.filter((item) => {
-        const rawDate = item["Installation Date"];
-        const parsed = parseDate(rawDate);
+    //   filtered = filtered.filter((item) => {
+    //     const rawDate = item["Installation Date"];
+    //     const parsed = parseDate(rawDate);
 
-        return (
-          parsed?.isValid() &&
-          searchDate.isValid() &&
-          parsed.isSame(searchDate, "day")
-        );
-      });
-    }
+    //     return (
+    //       parsed?.isValid() &&
+    //       searchDate.isValid() &&
+    //       parsed.isSame(searchDate, "day")
+    //     );
+    //   });
+    // }
 
     // Filter by SRN
     if (searchSRN.trim()) {
@@ -930,14 +1071,16 @@ const clearEditCustomerSignature = () => {
       );
     }
 
-    setCustomerDataList(filtered);
+    // setCustomerDataList(filtered);
+    setReportDataList(filtered);
   };
 
   const fetchCustomerNames = async () => {
     try {
-      const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec?action=getAllCustomerData`
-      );
+      // const res = await fetch(
+      //   `https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec?action=getAllCustomerData`
+      // );
+      const res = await fetch(`${GAS_URL}?action=getAllCustomerData`);
       const result = await res.json();
 
       if (result.success) {
@@ -965,8 +1108,13 @@ const clearEditCustomerSignature = () => {
 
   const handleCustomerSelect = async (selectedName) => {
     try {
+      // const res = await fetch(
+      //   `https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec?action=getCustomerData&name=${encodeURIComponent(
+      //     selectedName
+      //   )}`
+      // );
       const res = await fetch(
-        `https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec?action=getCustomerData&name=${encodeURIComponent(
+        `${GAS_URL}?action=getCustomerData&name=${encodeURIComponent(
           selectedName
         )}`
       );
@@ -994,9 +1142,11 @@ const clearEditCustomerSignature = () => {
 
   const fetchSRN = async () => {
     try {
-      const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec"
-      );
+      // const response = await fetch(
+      //   "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec"
+      // );
+      const response = await fetch(GAS_URL);
+
       const data = await response.json(); // ✅ Parse JSON directly
 
       // console.log("Fetched SRN:", data.srn); // ✅ Log SRN in console
@@ -1023,7 +1173,7 @@ const clearEditCustomerSignature = () => {
             key: `${Date.now()}-${i}`,
             partNumber: part.partNumber ?? "",
             description: part.description ?? "",
-            quantity: part.quantity ?? 1,
+            quantity: part.quantity ?? "",
             note: part.note ?? "",
           }))
         : [
@@ -1058,9 +1208,6 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 2, 100);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Address limited to 2 lines, 95 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
         description:
@@ -1078,9 +1225,6 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 2, 100);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Serial Number limited to 2 lines, 95 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
         description:
@@ -1098,9 +1242,6 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 4, 1000);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Description limited to 4 lines, 995 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
         description:
@@ -1121,9 +1262,6 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 2, 500);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Cause of Failure limited to 2 lines, 495 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
         description:
@@ -1143,12 +1281,10 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 1, 200);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Notes limited to 1 line, 195 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
-        description: "Notes input was limited to 1 line, 195 characters. Excess removed.",
+        description:
+          "Notes input was limited to 1 line, 195 characters. Excess removed.",
         placement: "bottomRight",
       });
     }
@@ -1162,9 +1298,6 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 2, 100);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Serial Number limited to 2 lines, 95 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
         description:
@@ -1182,9 +1315,6 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 2, 100);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Address limited to 2 lines, 95 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
         description:
@@ -1202,9 +1332,6 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 4, 1000);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Description limited to 4 lines, 995 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
         description:
@@ -1224,9 +1351,6 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 2, 500);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Cause of Failure limited to 2 lines, 495 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
         description:
@@ -1244,12 +1368,10 @@ const clearEditCustomerSignature = () => {
     const limited = enforceTextLimit(input, 1, 200);
 
     if (input !== limited) {
-      // message.warning(
-      //   "Notes limited to 1 line, 195 characters. Excess removed."
-      // );
       notification.warning({
         message: "Warning",
-        description: "Notes input was limited to 1 line, 195 characters. Excess removed.",
+        description:
+          "Notes input was limited to 1 line, 195 characters. Excess removed.",
         placement: "bottomRight",
       });
     }
@@ -1259,13 +1381,12 @@ const clearEditCustomerSignature = () => {
   };
 
   const handleInputChange = (key, field, value) => {
-    // Directly update numeric values (e.g., Quantity)
     if (field === "quantity") {
       const updatedData = data.map((row) =>
         row.key === key ? { ...row, [field]: value } : row
       );
       setData(updatedData);
-      return; // Exit function early for numeric inputs
+      return;
     }
 
     // Ensure text inputs are handled correctly
@@ -1291,19 +1412,13 @@ const clearEditCustomerSignature = () => {
         "Description field input limited to 1 line, 30 characters. Excess text won't be included.",
       note: "Note field input limited to 1 line, 30 characters. Excess text won't be included.",
     };
-    // console.log(
-    //   "Checking field:",
-    //   field,
-    //   "value:",
-    //   JSON.stringify(stringValue)
-    // );
+
     let lines = stringValue.split("\n");
 
     // Enforce row limits
     if (lines.length > maxRows[field]) {
-      console.log("Too many lines for", field);
+      // console.log("Too many lines for", field);
 
-      // message.warning(fieldMessages[field]);
       notification.warning({
         message: "Warning",
         description: fieldMessages[field],
@@ -1312,13 +1427,10 @@ const clearEditCustomerSignature = () => {
       stringValue = lines.slice(0, maxRows[field]).join("\n");
     }
 
-
     // Enforce character limits
     if (stringValue.length >= maxLengths[field]) {
       // Show warning only when the user hits the limit exactly (not less)
       if (stringValue.length === maxLengths[field]) {
-        // console.log("Limit reached for", field);
-
         notification.warning({
           message: "Warning",
           description: fieldMessages[field],
@@ -1326,7 +1438,6 @@ const clearEditCustomerSignature = () => {
         });
       }
 
-      // Trim text if it somehow exceeded (like via paste)
       stringValue = stringValue.substring(0, maxLengths[field]);
     }
 
@@ -1335,7 +1446,6 @@ const clearEditCustomerSignature = () => {
       [key]: { ...prev[key], [field]: true }, // Show tooltip
     }));
 
-    // Update the state
     const updatedData = data.map((row) =>
       row.key === key ? { ...row, [field]: stringValue } : row
     );
@@ -1376,7 +1486,6 @@ const clearEditCustomerSignature = () => {
     let lines = stringValue.split("\n");
 
     if (lines.length > maxRows[field]) {
-      // message.warning(fieldMessages[field]);
       notification.warning({
         message: "Warning",
         description: fieldMessages[field],
@@ -1385,12 +1494,9 @@ const clearEditCustomerSignature = () => {
       stringValue = lines.slice(0, maxRows[field]).join("\n");
     }
 
-
     if (stringValue.length >= maxLengths[field]) {
       // Show warning only when the user hits the limit exactly (not less)
       if (stringValue.length === maxLengths[field]) {
-        // console.log("Limit reached for", field);
-
         notification.warning({
           message: "Warning",
           description: fieldMessages[field],
@@ -1398,7 +1504,6 @@ const clearEditCustomerSignature = () => {
         });
       }
 
-      // Trim text if it somehow exceeded (like via paste)
       stringValue = stringValue.substring(0, maxLengths[field]);
     }
     setTooltipVisibility((prev) => ({
@@ -1422,7 +1527,7 @@ const clearEditCustomerSignature = () => {
   const handleAddRow = () => {
     if (data.length < 2) {
       const newRow = {
-        key: Date.now().toString(), // Use a unique identifier
+        key: Date.now().toString(),
         partNumber: "",
         description: "",
         quantity: "",
@@ -1430,7 +1535,6 @@ const clearEditCustomerSignature = () => {
       };
       setData([...data, newRow]);
     } else {
-      // message.warning("Rows cannot exceed more than 2!");
       notification.warning({
         message: "Warning",
         description: "Rows cannot exceed more than 2!",
@@ -1456,7 +1560,6 @@ const clearEditCustomerSignature = () => {
       };
       setEditTableData([...editTabledata, newRow]);
     } else {
-      // message.warning("Rows cannot exceed more than 2!");
       notification.warning({
         message: "Warning",
         description: "Rows cannot exceed more than 2!",
@@ -1471,13 +1574,8 @@ const clearEditCustomerSignature = () => {
     }
   };
 
-  const formatDate = (date) => {
-    const parsed = dayjs(
-      date,
-      ["DD-MM-YYYY", "DD MMM YYYY", "YYYY-MM-DD", dayjs.ISO_8601],
-      true
-    );
-    return parsed.isValid() ? parsed.format("DD-MM-YYYY") : "";
+  const formatDate = (dateStr) => {
+    return typeof dateStr === "string" && dateStr.trim() ? dateStr.trim() : "";
   };
 
   const Tablecolumns = [
@@ -1490,7 +1588,7 @@ const clearEditCustomerSignature = () => {
     {
       title: "Installation Date",
       dataIndex: "Installation Date",
-      render: (date) => formatDate(date),
+      render: (date) => date || "-",
     },
     { title: "Telephone", dataIndex: "Telephone" },
     { title: "Work Time", dataIndex: "Work Time" },
@@ -1498,12 +1596,12 @@ const clearEditCustomerSignature = () => {
     {
       title: "Departure Date",
       dataIndex: "Departure Date",
-      render: (date) => formatDate(date),
+      render: (date) => date || "-",
     },
     {
       title: "Return Date",
       dataIndex: "Return Date",
-      render: (date) => formatDate(date),
+      render: (date) => date || "-",
     },
     { title: "Installation/Commission", dataIndex: "Installation/Commission" },
     { title: "Maintenance", dataIndex: "Maintenance" },
@@ -1556,6 +1654,34 @@ const clearEditCustomerSignature = () => {
     },
     { title: "Service contract", dataIndex: "Service contract" },
     { title: "Goodwill", dataIndex: "Goodwill" },
+    ...(user?.email === "admin@haitianme.com"
+      ? [
+          {
+            title: "Start Time",
+            dataIndex: "Start time",
+            render: (time) => {
+              // console.log("Time:", time);
+              return time || "-";
+            },
+          },
+          {
+            title: "End Time",
+            dataIndex: "End time",
+            render: (time) => time || "-",
+          },
+          {
+            title: "Duration",
+            dataIndex: "Duration",
+            render: (val) => val || "-",
+          },
+          {
+            title: "User Email",
+            dataIndex: "User",
+            render: (val) => val || "-",
+          },
+        ]
+      : []),
+
     {
       title: "Action",
       key: "action",
@@ -1594,7 +1720,7 @@ const clearEditCustomerSignature = () => {
       title: "Part Number",
       dataIndex: "partNumber",
       key: "partNumber",
-      width: "25%", // Adjust as needed
+      width: "25%",
       render: (_, record) => (
         <Tooltip
           title={record.partNumber}
@@ -1619,7 +1745,7 @@ const clearEditCustomerSignature = () => {
       title: "Description",
       dataIndex: "description",
       key: "description",
-      width: "35%", // Increased size
+      width: "35%",
       render: (_, record) => (
         <Tooltip
           title={record.description}
@@ -1655,7 +1781,9 @@ const clearEditCustomerSignature = () => {
             min={1}
             value={record.quantity}
             onChange={
-              (value) => handleInputChange(record.key, "quantity", value ?? 1) // Prevent null issues
+              // (value) => handleInputChange(record.key, "quantity", value ?? 1) // Prevent null issues
+              (value) =>
+                handleInputChange(record.key, "quantity", value ?? null) // Prevent null issues
             }
             onFocus={() =>
               setTooltipVisibility((prev) => ({
@@ -1787,7 +1915,8 @@ const clearEditCustomerSignature = () => {
             value={record.quantity}
             onChange={
               (value) =>
-                handleEditInputChange(record.key, "quantity", value ?? 1) // Prevent null issues
+                // handleEditInputChange(record.key, "quantity", value ?? 1) // Prevent null issues
+                handleEditInputChange(record.key, "quantity", value ?? null) // Prevent null issues
             }
             onFocus={() =>
               setTooltipVisibility((prev) => ({
@@ -1893,7 +2022,9 @@ const clearEditCustomerSignature = () => {
             min={1}
             value={record.quantity}
             onChange={
-              (value) => handleInputChange(record.key, "quantity", value ?? 1) // Prevent null issues
+              // (value) => handleInputChange(record.key, "quantity", value ?? 1) // Prevent null issues
+              (value) =>
+                handleInputChange(record.key, "quantity", value ?? null) // Prevent null issues
             }
             onFocus={() =>
               setTooltipVisibility((prev) => ({
@@ -1944,7 +2075,7 @@ const clearEditCustomerSignature = () => {
     const reader = new FileReader();
 
     reader.onloadend = () => {
-      // console.log("Uploaded Image (Base64):", reader.result); // Debugging
+      // console.log("Uploaded Image (Base64):", reader.result);
       setSignatureManager(reader.result);
       setIsManagerSignUploaded(true);
       // message.success("Manager Signature uploaded successfully!");
@@ -1961,10 +2092,8 @@ const clearEditCustomerSignature = () => {
   };
 
   const clearManagerSignature = () => {
-    // setSignatureManager(""); // Remove signature
-    setSignatureManager(null); // Remove signature
+    setSignatureManager(null);
     setIsManagerSignUploaded(false);
-    // message.success("Signature removed.");
     notification.success({
       message: "Success",
       description: "Manager signature removed successfully!",
@@ -1989,14 +2118,12 @@ const clearEditCustomerSignature = () => {
         sigTechnician.current.getCanvas().toDataURL("image/png")
       );
       setIsTechnicianSignSaved(true);
-      // message.success("Technician Signature saved successfully!");
       notification.success({
         message: "Success",
         description: "Technician signature saved successfully!",
         placement: "bottomRight",
       });
     } else {
-      // message.error("Please draw a signature before saving.");
       notification.error({
         message: "Error",
         description: "Please draw the technician signature before saving.",
@@ -2004,7 +2131,6 @@ const clearEditCustomerSignature = () => {
       });
     }
   };
-  
 
   const clearTechnicianSignature = () => {
     if (sigTechnician.current && !sigTechnician.current.isEmpty()) {
@@ -2033,14 +2159,12 @@ const clearEditCustomerSignature = () => {
         sigCustomer.current.getCanvas().toDataURL("image/png")
       );
       setIsCustomerSignSaved(true);
-      // message.success("Customer Signature saved successfully!");
       notification.success({
         message: "Success",
         description: "Customer signature saved successfully!",
         placement: "bottomRight",
       });
     } else {
-      // message.error("Please draw customer signature before saving.");
       notification.error({
         message: "Error",
         description: "Please draw the customer signature before saving.",
@@ -2084,11 +2208,76 @@ const clearEditCustomerSignature = () => {
     };
   };
 
+  // const uploadPdfToDrive = async (pdfBlob, filename) => {
+  //   const customerName = formData.customerName || "";
+  //   const reader = new FileReader();
+  //   // reader.onloadend = async () => {
+  //   //   const base64 = reader.result.split(",")[1];
+
+  //   //   const payload = new URLSearchParams();
+  //   //   payload.append("action", "uploadPdf");
+  //   //   payload.append("pdfBase64", base64);
+  //   //   payload.append("filename", filename);
+  //   //   payload.append("customerName", customerName);
+
+  //   //   const response = await fetch(
+
+  //   //     GAS_URL,
+  //   //     {
+  //   //       method: "POST",
+  //   //       headers: {
+  //   //         "Content-Type": "application/x-www-form-urlencoded",
+  //   //       },
+  //   //       body: payload.toString(),
+  //   //     }
+  //   //   );
+
+  //   //   const result = await response.json();
+  //   //   if (result.success) {
+  //   //     // message.success("PDF uploaded to Drive");
+  //   //     notification.success({
+  //   //       message: "Success",
+  //   //       description: "PDF uploaded to Drive successfully!",
+  //   //       placement: "bottomRight",
+  //   //     });
+  //   //     // console.log("Drive Link:", result.url);
+  //   //   } else {
+  //   //     // message.error("Failed to upload PDF: " + result.message);
+  //   //     notification.error({
+  //   //       message: "Error",
+  //   //       description: "Failed to upload PDF in Drive: " + result.message,
+  //   //       placement: "bottomRight",
+  //   //     });
+  //   //   }
+  //   // };
+
+  //   reader.onloadend = async () => {
+  // let base64 = reader.result.split(",")[1];
+  // base64 = base64.replace(/\s/g, ""); // remove whitespace/newlines
+
+  // const payload = new URLSearchParams();
+  // payload.append("action", "uploadPdf");
+  // payload.append("pdfBase64", base64);
+  // payload.append("filename", filename);
+  // payload.append("customerName", customerName);
+
+  // const response = await fetch(GAS_URL, {
+  //   method: "POST",
+  //   headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  //   body: payload.toString(),
+  // });
+  // }
+
+  //   reader.readAsDataURL(pdfBlob);
+  // };
+
   const uploadPdfToDrive = async (pdfBlob, filename) => {
-      const customerName = formData.customerName || "";
+    const customerName = formData.customerName || "";
     const reader = new FileReader();
+
     reader.onloadend = async () => {
-      const base64 = reader.result.split(",")[1];
+      let base64 = reader.result.split(",")[1];
+      base64 = base64.replace(/\s/g, "");
 
       const payload = new URLSearchParams();
       payload.append("action", "uploadPdf");
@@ -2096,40 +2285,96 @@ const clearEditCustomerSignature = () => {
       payload.append("filename", filename);
       payload.append("customerName", customerName);
 
-      const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
-        {
+      try {
+        const response = await fetch(GAS_URL, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: payload.toString(),
-        }
-      );
-
-      const result = await response.json();
-      if (result.success) {
-        // message.success("PDF uploaded to Drive");
-        notification.success({
-          message: "Success",
-          description: "PDF uploaded to Drive successfully!",
-          placement: "bottomRight",
         });
-        // console.log("Drive Link:", result.url);
-      } else {
-        // message.error("Failed to upload PDF: " + result.message);
+
+        const result = await response.json();
+
+        if (result.success) {
+          notification.success({
+            message: "Success",
+            description: "PDF uploaded to Drive successfully!",
+            placement: "bottomRight",
+            duration: 0,
+          });
+          // console.log("Drive Link:", result.url);
+        } else {
+          notification.error({
+            message: "Error",
+            description: "Failed to upload PDF in Drive: " + result.message,
+            placement: "bottomRight",
+            duration: 0,
+          });
+        }
+      } catch (error) {
         notification.error({
           message: "Error",
-          description: "Failed to upload PDF in Drive: " + result.message,
+          description: "Network or server error during PDF upload",
           placement: "bottomRight",
+          duration: 0,
         });
+        // console.error("Upload error:", error);
       }
     };
 
     reader.readAsDataURL(pdfBlob);
   };
 
-  const generatePDF = async (formData, checkboxValues, partsUsed) => {
+  //Working code
+  // const uploadPdfToDrive = async (pdfBlob, filename) => {
+  //     const customerName = formData.customerName || "";
+  //   const reader = new FileReader();
+  //   reader.onloadend = async () => {
+  //     const base64 = reader.result.split(",")[1];
+
+  //     const payload = new URLSearchParams();
+  //     payload.append("action", "uploadPdf");
+  //     payload.append("pdfBase64", base64);
+  //     payload.append("filename", filename);
+  //     payload.append("customerName", customerName);
+
+  //     const response = await fetch(
+  //      GAS_URL,
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/x-www-form-urlencoded",
+  //         },
+  //         body: payload.toString(),
+  //       }
+  //     );
+
+  //     const result = await response.json();
+  //     if (result.success) {
+  //       // message.success("PDF uploaded to Drive");
+  //       notification.success({
+  //         message: "Success",
+  //         description: "PDF uploaded to Drive successfully!",
+  //         placement: "bottomRight",
+  //         duration: 0,
+  //       });
+  //       console.log("Drive Link:", result.url);
+  //     } else {
+  //       // message.error("Failed to upload PDF: " + result.message);
+  //       notification.error({
+  //         message: "Error",
+  //         description: "Failed to upload PDF in Drive: " + result.message,
+  //         placement: "bottomRight",
+  //         duration: 0,
+  //       });
+  //       console.error("Upload error:", error);
+  //     }
+  //   };
+
+  //   reader.readAsDataURL(pdfBlob);
+  // };
+
+
+  const generatePDF = async (formData, checkboxValues, partsUsed, srn) => {
     const doc = new jsPDF();
     // const startX = 10;
     const pageWidth = doc.internal.pageSize.width;
@@ -2209,16 +2454,18 @@ const clearEditCustomerSignature = () => {
     const machineLogoHeight = 40;
     const haitianLogoWidth = 50;
     const haitianLogoHeight = 15;
-    doc.addImage(
-      HaitianMachine,
-      "PNG",
-      0,
-      -9,
-      machineLogoWidth,
-      machineLogoHeight
-    );
+    // doc.addImage(
+    //   HaitianMachine,
+    //   "PNG",
+    //   0,
+    //   -9,
+    //   machineLogoWidth,
+    //   machineLogoHeight
+    // );
     const centX = (pageWidth - haitianLogoWidth) / 2;
-    doc.addImage(HaitianLogo, "PNG", centX, 5, 50, 15);
+    // doc.addImage(HaitianLogo, "PNG", centX, 5, 50, 15);
+    doc.addImage(HaitianLogo, "PNG", 10, 5, haitianLogoWidth, haitianLogoHeight);
+
 
     doc.setFont("Emirates", "bold");
     doc.setFontSize(11);
@@ -2678,10 +2925,13 @@ const clearEditCustomerSignature = () => {
 
     // const fileName = `HT_Service_Report_${srn || "N/A"}.pdf`;
 
-       const sanitizedCustomerName = formData.customerName.replace(/[^a-zA-Z0-9- ]/g, "").trim();
+    const sanitizedCustomerName = formData.customerName
+      .replace(/[^a-zA-Z0-9- ]/g, "")
+      .trim();
 
-    const fileName = `HT Service Report ${sanitizedCustomerName} ${srn|| "N/A"}.pdf`;
-
+    const fileName = `HT Service Report ${sanitizedCustomerName} ${
+      srn || "N/A"
+    }.pdf`;
 
     // doc.save("Service_Report.pdf");
     doc.save(fileName);
@@ -2767,16 +3017,18 @@ const clearEditCustomerSignature = () => {
     const machineLogoHeight = 40;
     const haitianLogoWidth = 50;
     const haitianLogoHeight = 15;
-    doc.addImage(
-      HaitianMachine,
-      "PNG",
-      0,
-      -9,
-      machineLogoWidth,
-      machineLogoHeight
-    );
+    // doc.addImage(
+    //   HaitianMachine,
+    //   "PNG",
+    //   0,
+    //   -9,
+    //   machineLogoWidth,
+    //   machineLogoHeight
+    // );
     const centX = (pageWidth - haitianLogoWidth) / 2;
-    doc.addImage(HaitianLogo, "PNG", centX, 5, 50, 15);
+    // doc.addImage(HaitianLogo, "PNG", centX, 5, 50, 15);
+    doc.addImage(HaitianLogo, "PNG", 10, 5, haitianLogoWidth, haitianLogoHeight);
+
 
     doc.setFont("Emirates", "bold");
     doc.setFontSize(11);
@@ -3236,9 +3488,13 @@ const clearEditCustomerSignature = () => {
     // const fileName = `HT_Service_Report_${editsrn || "N/A"}.pdf`;
 
     // const sanitizedCustomerName = formData.customerName.replace(/[^a-zA-Z0-9-_ ]/g, "").replace(/\s+/g, "_");
-    const sanitizedEditCustomerName = formData.customerName.replace(/[^a-zA-Z0-9- ]/g, "").trim();
+    const sanitizedEditCustomerName = formData.customerName
+      .replace(/[^a-zA-Z0-9- ]/g, "")
+      .trim();
 
-const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N/A"}.pdf`;
+    const fileName = `HT Service Report ${sanitizedEditCustomerName} ${
+      editsrn || "N/A"
+    }.pdf`;
 
     // doc.save("Service_Report.pdf");
     doc.save(fileName);
@@ -3263,7 +3519,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
 
     // Sending the file to the Google Apps Script for uploading to Drive
     const res = await fetch(
-      "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      // "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      GAS_URL,
       {
         method: "POST",
         headers: {
@@ -3310,12 +3567,348 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
     "Goodwill",
   ];
 
- 
- 
+  // const handleExportToExcel = () => {
+  //   if (!customerDataList.length) {
+  //     // message.warning("No data to export.");
+  //     notification.warning({
+  //       message: "Warning",
+  //       description: "No data was found to export.",
+  //       placement: "bottomRight",
+  //     });
+  //     return;
+  //   }
+
+  //   // Sort by SRN (ascending)
+  //   const sortedData = [...customerDataList].sort((a, b) => {
+  //     const aSRN = parseInt(a["Service Request Number"], 10);
+  //     const bSRN = parseInt(b["Service Request Number"], 10);
+  //     return aSRN - bSRN;
+  //   });
+
+  //   // Flatten and format records
+  //   const flatData = sortedData.map((record) => {
+  //     const row = {};
+  //     EXPORT_COLUMNS.forEach((key) => {
+  //       let value = record[key];
+
+  //       if (typeof value === "boolean") value = value ? "Yes" : "No";
+  //       if (key.toLowerCase().includes("date")) value = formatDate(value);
+
+  //       if (key === "Cause of Failure") {
+  //         const fullText = value ?? "";
+  //         const { downloadUrl, filename } =
+  //           extractFileInfoFromCauseText(fullText);
+  //         const cleanedText = fullText
+  //           .toString()
+  //           .split("\n")
+  //           .filter(
+  //             (line) =>
+  //               !line.trim().startsWith("Image:") &&
+  //               !line.trim().startsWith("Filename:")
+  //           )
+  //           .join(" ")
+  //           .trim();
+
+  //         value = cleanedText;
+  //         if (filename || downloadUrl) {
+  //           value += `\nFilename: ${filename || "N/A"}\nImage: ${
+  //             downloadUrl || "N/A"
+  //           }`;
+  //         }
+  //       }
+
+  //       row[key] = value ?? "";
+  //     });
+  //     return row;
+  //   });
+
+  //   // Generate 2D array [headers, ...rows]
+  //   const worksheetData = [
+  //     EXPORT_COLUMNS,
+  //     ...flatData.map((item) => EXPORT_COLUMNS.map((col) => item[col])),
+  //   ];
+
+  //   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+  //   // Apply styles
+  //   const range = XLSX.utils.decode_range(worksheet["!ref"]);
+  //   for (let R = range.s.r; R <= range.e.r; ++R) {
+  //     for (let C = range.s.c; C <= range.e.c; ++C) {
+  //       const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+  //       if (!worksheet[cellRef]) continue;
+
+  //       const isHeader = R === 0;
+  //       worksheet[cellRef].s = {
+  //         font: {
+  //           bold: isHeader,
+  //           sz: isHeader ? 14 : 11,
+  //           name: "Arial",
+  //         },
+  //         alignment: {
+  //           wrapText: true,
+  //           vertical: "center",
+  //           horizontal: "left",
+  //         },
+  //         fill: isHeader ? { fgColor: { rgb: "FFF200" } } : undefined,
+  //         border: {
+  //           top: { style: "thin", color: { rgb: "000000" } },
+  //           bottom: { style: "thin", color: { rgb: "000000" } },
+  //           left: { style: "thin", color: { rgb: "000000" } },
+  //           right: { style: "thin", color: { rgb: "000000" } },
+  //         },
+  //       };
+  //     }
+  //   }
+
+  //   // Custom column widths
+  //   const columnWidths = {
+  //     "Service Request Number": 32,
+  //     "Customer Name": 45,
+  //     "Machine Type": 45,
+  //     Address: 40,
+  //     "Serial Number": 45,
+  //     Contact: 30,
+  //     Telephone: 40,
+  //     "Installation Date": 30,
+  //     "Departure Date": 30,
+  //     "Return Date": 18,
+  //     "Work Time": 30,
+  //     "Service Technician": 30,
+  //     "Installation/Commission": 40,
+  //     Maintenance: 20,
+  //     Defect: 20,
+  //     "Customer Visit (Report)": 40,
+  //     Other: 20,
+  //     "Description of work/of defect/failure mode": 100,
+  //     "Cause of Failure": 100,
+  //     "Notes/Further action required": 100,
+  //     "Part Number": 40,
+  //     Description: 50,
+  //     Quantity: 20,
+  //     Note: 40,
+  //     "F.O.C Commissioning": 40,
+  //     "F.O.C Maintenance": 40,
+  //     Guarantee: 25,
+  //     "Chargeable Maintenance": 40,
+  //     "Customer Visit (Service)": 50,
+  //     "Service contract": 40,
+  //     Goodwill: 20,
+  //   };
+
+  //   worksheet["!cols"] = EXPORT_COLUMNS.map((col) => ({
+  //     wch: columnWidths[col] || 25,
+  //   }));
+
+  //   // Finalize workbook
+  //   const workbook = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(workbook, worksheet, "Service Report");
+
+  //   const excelBuffer = XLSX.write(workbook, {
+  //     bookType: "xlsx",
+  //     type: "array",
+  //   });
+
+  //   const blob = new Blob([excelBuffer], {
+  //     type: "application/octet-stream",
+  //   });
+
+  //   saveAs(
+  //     blob,
+  //     `Haitian_Service_Report_Excel_Exported_On_${dayjs().format(
+  //       "DD-MM-YY_HH-mm-ss"
+  //     )}.xlsx`
+  //   );
+  // };
+
+  // const handleExportToExcel = () => {
+  //   // if (!customerDataList.length) {
+  //   //   notification.warning({
+  //   //     message: "Warning",
+  //   //     description: "No data was found to export.",
+  //   //     placement: "bottomRight",
+  //   //   });
+  //   //   return;
+  //   // }
+
+  //   if (!reportDataList.length) {
+  //     notification.warning({
+  //       message: "Warning",
+  //       description: "No data was found to export.",
+  //       placement: "bottomRight",
+  //     });
+  //     return;
+  //   }
+
+  //   // Columns to export
+  //   let exportColumns = [...EXPORT_COLUMNS];
+  //   if (user?.email === "admin@haitianme.com") {
+  //     exportColumns = [
+  //       ...exportColumns,
+  //       { title: "Start Time", key: "Start time" },
+  //       { title: "End Time", key: "End time" },
+  //       { title: "Duration", key: "Duration" },
+  //       { title: "User Email", key: "User" },
+  //     ];
+  //   }
+
+  //   // Sort by SRN (ascending)
+  //   // const sortedData = [...customerDataList].sort((a, b) => {
+  //   //   const aSRN = parseInt(a["Service Request Number"], 10);
+  //   //   const bSRN = parseInt(b["Service Request Number"], 10);
+  //   //   return aSRN - bSRN;
+  //   // });
+
+  //   const sortedData = [...reportDataList].sort((a, b) => {
+  //     const aSRN = parseInt(a["Service Request Number"], 10);
+  //     const bSRN = parseInt(b["Service Request Number"], 10);
+  //     return aSRN - bSRN;
+  //   });
+
+  //   // Flatten and format records
+  //   const flatData = sortedData.map((record) => {
+  //     const row = {};
+  //     exportColumns.forEach((col) => {
+  //       const key = typeof col === "string" ? col : col.key;
+  //       let value = record[key];
+
+  //       if (typeof value === "boolean") value = value ? "Yes" : "No";
+  //       if (
+  //         key.toLowerCase().includes("date") ||
+  //         key.toLowerCase().includes("time")
+  //       )
+  //         value = formatDate(value);
+
+  //       if (key === "Cause of Failure") {
+  //         const fullText = value ?? "";
+  //         const { downloadUrl, filename } =
+  //           extractFileInfoFromCauseText(fullText);
+  //         const cleanedText = fullText
+  //           .toString()
+  //           .split("\n")
+  //           .filter(
+  //             (line) =>
+  //               !line.trim().startsWith("Image:") &&
+  //               !line.trim().startsWith("Filename:")
+  //           )
+  //           .join(" ")
+  //           .trim();
+
+  //         value = cleanedText;
+  //         if (filename || downloadUrl) {
+  //           value += `\nFilename: ${filename || "N/A"}\nImage: ${
+  //             downloadUrl || "N/A"
+  //           }`;
+  //         }
+  //       }
+
+  //       row[key] = value ?? "";
+  //     });
+  //     return row;
+  //   });
+
+  //   // Generate 2D array [headers, ...rows]
+  //   const worksheetData = [
+  //     exportColumns.map((col) => (typeof col === "string" ? col : col.title)),
+  //     ...flatData.map((item) =>
+  //       exportColumns.map(
+  //         (col) => item[typeof col === "string" ? col : col.key]
+  //       )
+  //     ),
+  //   ];
+
+  //   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+  //   // Apply styles
+  //   const range = XLSX.utils.decode_range(worksheet["!ref"]);
+  //   for (let R = range.s.r; R <= range.e.r; ++R) {
+  //     for (let C = range.s.c; C <= range.e.c; ++C) {
+  //       const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+  //       if (!worksheet[cellRef]) continue;
+
+  //       const isHeader = R === 0;
+  //       worksheet[cellRef].s = {
+  //         font: { bold: isHeader, sz: isHeader ? 14 : 11, name: "Arial" },
+  //         alignment: { wrapText: true, vertical: "center", horizontal: "left" },
+  //         fill: isHeader ? { fgColor: { rgb: "FFF200" } } : undefined,
+  //         border: {
+  //           top: { style: "thin", color: { rgb: "000000" } },
+  //           bottom: { style: "thin", color: { rgb: "000000" } },
+  //           left: { style: "thin", color: { rgb: "000000" } },
+  //           right: { style: "thin", color: { rgb: "000000" } },
+  //         },
+  //       };
+  //     }
+  //   }
+
+  //   // Column widths
+  //   const columnWidths = {
+  //     "Service Request Number": 32,
+  //     "Customer Name": 45,
+  //     "Machine Type": 45,
+  //     Address: 40,
+  //     "Serial Number": 45,
+  //     Contact: 30,
+  //     Telephone: 40,
+  //     "Installation Date": 30,
+  //     "Departure Date": 30,
+  //     "Return Date": 18,
+  //     "Work Time": 30,
+  //     "Service Technician": 30,
+  //     "Installation/Commission": 40,
+  //     Maintenance: 20,
+  //     Defect: 20,
+  //     "Customer Visit (Report)": 40,
+  //     Other: 20,
+  //     "Description of work/of defect/failure mode": 100,
+  //     "Cause of Failure": 100,
+  //     "Notes/Further action required": 100,
+  //     "Part Number": 40,
+  //     Description: 50,
+  //     Quantity: 20,
+  //     Note: 40,
+  //     "F.O.C Commissioning": 40,
+  //     "F.O.C Maintenance": 40,
+  //     Guarantee: 25,
+  //     "Chargeable Maintenance": 40,
+  //     "Customer Visit (Service)": 50,
+  //     "Service contract": 40,
+  //     Goodwill: 20,
+  //     "Start Time": 20,
+  //     "End Time": 20,
+  //     Duration: 20,
+  //     "User Email": 40,
+  //   };
+
+  //   worksheet["!cols"] = exportColumns.map((col) => ({
+  //     wch: columnWidths[typeof col === "string" ? col : col.title] || 25,
+  //   }));
+
+  //   // Create workbook
+  //   const workbook = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(workbook, worksheet, "Service Report");
+
+  //   const excelBuffer = XLSX.write(workbook, {
+  //     bookType: "xlsx",
+  //     type: "array",
+  //   });
+  //   const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+
+  //   saveAs(
+  //     blob,
+  //     `Haitian_Service_Report_Excel_Exported_On_${dayjs().format(
+  //       "DD-MM-YY_HH-mm-ss"
+  //     )}.xlsx`
+  //   );
+
+  //   notification.success({
+  //     message: "Success",
+  //     description: "Data Exported Successfully",
+  //     placement: "bottomRight",
+  //   });
+  // };
 
   const handleExportToExcel = () => {
-    if (!customerDataList.length) {
-      // message.warning("No data to export.");
+    if (!reportDataList || !reportDataList.length) {
       notification.warning({
         message: "Warning",
         description: "No data was found to export.",
@@ -3324,59 +3917,265 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       return;
     }
 
-    // Sort by SRN (ascending)
-    const sortedData = [...customerDataList].sort((a, b) => {
+    // Helper: try to find a matching value in an object given candidate names (case- & punctuation-insensitive)
+    const findValue = (obj, candidates) => {
+      if (obj == null) return undefined;
+      // if primitive, return as-is
+      if (typeof obj !== "object") return obj;
+      const objKeys = Object.keys(obj);
+      const normal = (s) =>
+        (s || "")
+          .toString()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+      const normCandidates = candidates.map(normal);
+      for (const k of objKeys) {
+        const kn = normal(k);
+        if (normCandidates.includes(kn)) return obj[k];
+      }
+      return undefined;
+    };
+
+    // Common candidate key names for part rows
+    // const PART_KEY_MAP = {
+    //   "Part Number": ["Part Number", "partNumber", "part_number", "partno", "part_no", "part"],
+    //   Description: ["Description", "description", "desc"],
+    //   Quantity: ["Quantity", "quantity", "qty", "Qty"],
+    //   Note: ["Note", "note", "notes", "remark"],
+    // };
+
+    const PART_KEY_MAP = {
+      "Part Number": ["Part Number"],
+      Description: ["Description"],
+      Quantity: ["Quantity"],
+      Note: ["Note"],
+    };
+
+    // Build exportColumns (same as your original logic)
+    let exportColumns = [...EXPORT_COLUMNS];
+    if (user?.email === "admin@haitianme.com") {
+      exportColumns = [
+        ...exportColumns,
+        { title: "Start Time", key: "Start time" },
+        { title: "End Time", key: "End time" },
+        { title: "Duration", key: "Duration" },
+        { title: "User Email", key: "User" },
+      ];
+    }
+
+    // Sort by SRN (as before)
+    const sortedData = [...reportDataList].sort((a, b) => {
       const aSRN = parseInt(a["Service Request Number"], 10);
       const bSRN = parseInt(b["Service Request Number"], 10);
       return aSRN - bSRN;
     });
 
-    // Flatten and format records
-    const flatData = sortedData.map((record) => {
-      const row = {};
-      EXPORT_COLUMNS.forEach((key) => {
-        let value = record[key];
+    // Flatten and format records (one excel row per part entry; if no parts, one row per record)
+    const flatData = [];
 
-        if (typeof value === "boolean") value = value ? "Yes" : "No";
-        if (key.toLowerCase().includes("date")) value = formatDate(value);
+    sortedData.forEach((record) => {
+      // try multiple locations/representations for parts
+      let partsUsed =
+        record["Parts Used"] ??
+        record.partsUsed ??
+        record.parts ??
+        record["Parts"] ??
+        [];
 
-        if (key === "Cause of Failure") {
-          const fullText = value ?? "";
-          const { downloadUrl, filename } =
-            extractFileInfoFromCauseText(fullText);
-          const cleanedText = fullText
-            .toString()
-            .split("\n")
-            .filter(
-              (line) =>
-                !line.trim().startsWith("Image:") &&
-                !line.trim().startsWith("Filename:")
-            )
-            .join(" ")
-            .trim();
-
-          value = cleanedText;
-          if (filename || downloadUrl) {
-            value += `\nFilename: ${filename || "N/A"}\nImage: ${
-              downloadUrl || "N/A"
-            }`;
+      // if it's a JSON string, try to parse
+      if (typeof partsUsed === "string") {
+        try {
+          const parsed = JSON.parse(partsUsed);
+          if (Array.isArray(parsed)) partsUsed = parsed;
+          else if (parsed && typeof parsed === "object") partsUsed = [parsed];
+          else {
+            // fallback to line-splitting or pipe/comma splitting
+            const lines = partsUsed
+              .split(/\r?\n/)
+              .map((l) => l.trim())
+              .filter(Boolean);
+            if (lines.length > 1) partsUsed = lines;
+            else {
+              const parts = partsUsed.split("|").map((p) => p.trim());
+              if (parts.length > 1)
+                partsUsed = [parts]; // we will handle arrays below
+              else partsUsed = [partsUsed];
+            }
           }
+        } catch (e) {
+          // not JSON — split lines or treat as single string
+          const lines = partsUsed
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter(Boolean);
+          partsUsed = lines.length ? lines : [partsUsed];
         }
+      }
 
-        row[key] = value ?? "";
+      // ensure array
+      if (!Array.isArray(partsUsed)) partsUsed = [partsUsed];
+
+      // detect if partsUsed contains meaningful objects/entries
+      const hasValidParts = partsUsed.some((p) => {
+        if (p == null) return false;
+        if (typeof p === "object") return Object.keys(p).length > 0;
+        if (typeof p === "string") return p.trim().length > 0;
+        if (Array.isArray(p)) return p.length > 0;
+        return false;
       });
-      return row;
+
+      if (hasValidParts) {
+        // expand each part item into its own row
+        partsUsed.forEach((partItem) => {
+          // If the part is an array like [pt1, ft1, qty, note]
+          const partArray = Array.isArray(partItem) ? partItem : null;
+          const partObj =
+            typeof partItem === "object" && !Array.isArray(partItem)
+              ? partItem
+              : null;
+          const partString = typeof partItem === "string" ? partItem : null;
+
+          const row = {};
+          exportColumns.forEach((col) => {
+            const key = typeof col === "string" ? col : col.key;
+            let value = "";
+
+            // if this column is a part-specific column -> get from part
+            if (
+              ["Part Number", "Description", "Quantity", "Note"].includes(key)
+            ) {
+              if (partObj) {
+                // try mapped candidates
+                value = findValue(partObj, PART_KEY_MAP[key] || [key]);
+              } else if (partArray) {
+                // map common order: [Part Number, Description, Quantity, Note]
+                const idxMap = {
+                  "Part Number": 0,
+                  Description: 1,
+                  Quantity: 2,
+                  Note: 3,
+                };
+                value = partArray[idxMap[key]] ?? "";
+              } else if (partString) {
+                // try pipe or comma split
+                const pieces = partString.split("|").map((p) => p.trim());
+                if (pieces.length > 1) {
+                  const idxMap = {
+                    "Part Number": 0,
+                    Description: 1,
+                    Quantity: 2,
+                    Note: 3,
+                  };
+                  value = pieces[idxMap[key]] ?? "";
+                } else {
+                  // no structure — put whole string in Part Number for visibility
+                  if (key === "Part Number") value = partString;
+                  else value = "";
+                }
+              }
+            } else {
+              // Non-part columns come from record (parent). Try direct or case-insensitive lookup.
+              let parentVal = record[key];
+              if (parentVal === undefined) {
+                parentVal = findValue(record, [key]);
+              }
+              if (typeof parentVal === "boolean")
+                parentVal = parentVal ? "Yes" : "No";
+              if (
+                parentVal != null &&
+                (key.toLowerCase().includes("date") ||
+                  key.toLowerCase().includes("time"))
+              ) {
+                parentVal = formatDate(parentVal);
+              }
+
+              // special handling for Cause of Failure (as you had before)
+              if (key === "Cause of Failure") {
+                const fullText = parentVal ?? "";
+                const { downloadUrl, filename } =
+                  extractFileInfoFromCauseText(fullText);
+                const cleanedText = fullText
+                  .toString()
+                  .split("\n")
+                  .filter(
+                    (line) =>
+                      !line.trim().startsWith("Image:") &&
+                      !line.trim().startsWith("Filename:")
+                  )
+                  .join(" ")
+                  .trim();
+                let composed = cleanedText;
+                if (filename || downloadUrl) {
+                  composed += `\nFilename: ${filename || "N/A"}\nImage: ${
+                    downloadUrl || "N/A"
+                  }`;
+                }
+                value = composed;
+              } else {
+                value = parentVal ?? "";
+              }
+            }
+
+            row[key] = value ?? "";
+          });
+
+          flatData.push(row);
+        });
+      } else {
+        // No parts -> single row for the record
+        const row = {};
+        exportColumns.forEach((col) => {
+          const key = typeof col === "string" ? col : col.key;
+          let value = record[key];
+          if (value === undefined) value = findValue(record, [key]);
+          if (typeof value === "boolean") value = value ? "Yes" : "No";
+          if (
+            value != null &&
+            (key.toLowerCase().includes("date") ||
+              key.toLowerCase().includes("time"))
+          ) {
+            value = formatDate(value);
+          }
+          if (key === "Cause of Failure") {
+            const fullText = value ?? "";
+            const { downloadUrl, filename } =
+              extractFileInfoFromCauseText(fullText);
+            const cleanedText = fullText
+              .toString()
+              .split("\n")
+              .filter(
+                (line) =>
+                  !line.trim().startsWith("Image:") &&
+                  !line.trim().startsWith("Filename:")
+              )
+              .join(" ")
+              .trim();
+            value = cleanedText;
+            if (filename || downloadUrl) {
+              value += `\nFilename: ${filename || "N/A"}\nImage: ${
+                downloadUrl || "N/A"
+              }`;
+            }
+          }
+          row[key] = value ?? "";
+        });
+        flatData.push(row);
+      }
     });
 
-    // Generate 2D array [headers, ...rows]
+    // Build worksheet data and sheet
     const worksheetData = [
-      EXPORT_COLUMNS,
-      ...flatData.map((item) => EXPORT_COLUMNS.map((col) => item[col])),
+      exportColumns.map((col) => (typeof col === "string" ? col : col.title)),
+      ...flatData.map((item) =>
+        exportColumns.map(
+          (col) => item[typeof col === "string" ? col : col.key]
+        )
+      ),
     ];
 
     const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
 
-    // Apply styles
+    // Apply styles (same as you had)
     const range = XLSX.utils.decode_range(worksheet["!ref"]);
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
@@ -3385,16 +4184,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
 
         const isHeader = R === 0;
         worksheet[cellRef].s = {
-          font: {
-            bold: isHeader,
-            sz: isHeader ? 14 : 11,
-            name: "Arial",
-          },
-          alignment: {
-            wrapText: true,
-            vertical: "center",
-            horizontal: "left",
-          },
+          font: { bold: isHeader, sz: isHeader ? 14 : 11, name: "Arial" },
+          alignment: { wrapText: true, vertical: "center", horizontal: "left" },
           fill: isHeader ? { fgColor: { rgb: "FFF200" } } : undefined,
           border: {
             top: { style: "thin", color: { rgb: "000000" } },
@@ -3406,7 +4197,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       }
     }
 
-    // Custom column widths
+    // Column widths (same table as you had)
     const columnWidths = {
       "Service Request Number": 32,
       "Customer Name": 45,
@@ -3439,13 +4230,17 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       "Customer Visit (Service)": 50,
       "Service contract": 40,
       Goodwill: 20,
+      "Start Time": 20,
+      "End Time": 20,
+      Duration: 20,
+      "User Email": 40,
     };
 
-    worksheet["!cols"] = EXPORT_COLUMNS.map((col) => ({
-      wch: columnWidths[col] || 25,
+    worksheet["!cols"] = exportColumns.map((col) => ({
+      wch: columnWidths[typeof col === "string" ? col : col.title] || 25,
     }));
 
-    // Finalize workbook
+    // Create workbook and download
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Service Report");
 
@@ -3453,10 +4248,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       bookType: "xlsx",
       type: "array",
     });
-
-    const blob = new Blob([excelBuffer], {
-      type: "application/octet-stream",
-    });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
 
     saveAs(
       blob,
@@ -3464,6 +4256,12 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         "DD-MM-YY_HH-mm-ss"
       )}.xlsx`
     );
+
+    notification.success({
+      message: "Success",
+      description: "Data Exported Successfully",
+      placement: "bottomRight",
+    });
   };
 
   const handleRefresh = async () => {
@@ -3476,9 +4274,9 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         description: "Table data refreshed. Showing updated data",
         placement: "bottomRight", // Optional: can be 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'
       });
-          setSearchText("");
-                    setSearchInstallationDate(null);
-                    setSearchSRN("");
+      setSearchText("");
+      setSearchInstallationDate(null);
+      setSearchSRN("");
     } catch (err) {
       // message.error("Failed to refresh data");
       notification.error({
@@ -3498,18 +4296,24 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
     setIsSubmitting(true);
     setLoading(true);
 
+    const stopSubmitting = () => {
+      setLoading(false);
+      setIsSubmitting(false);
+      isSubmittingRef.current = false;
+    };
+
     try {
       // if (!srn) return message.error("SRN missing.");
 
-      if (!srn) {
-        // message.error("SRN missing.");
-        notification.error({
-          message: "Error",
-          description: "Service Request Number is missing.",
-          placement: "bottomRight",
-        });
-        return;
-      }
+      // if (!srn) {
+      //   // message.error("SRN missing.");
+      //   notification.error({
+      //     message: "Error",
+      //     description: "Service Request Number is missing.",
+      //     placement: "bottomRight",
+      //   });
+      //   return;
+      // }
 
       const isTooLong =
         serialNumber.length > 100 ||
@@ -3519,20 +4323,16 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         notes.length > 200;
 
       if (isTooLong) {
-        // message.error(
-        //   "Some inputs exceed allowed limits. Please fix them before submitting."
-        // );
-
         notification.error({
           message: "Error",
           description:
             "Some inputs exceed allowed limits. Please check and fix them before submitting.",
           placement: "bottomRight", // Optional: can be 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'
         });
+        stopSubmitting();
 
         return;
       }
-      
 
       if (
         !isTechnicianSignSaved ||
@@ -3545,6 +4345,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
             "Please ensure the manager's signature is uploaded, and the technician's and customer's signatures are saved before submitting.",
           placement: "bottomRight",
         });
+        stopSubmitting();
+
         return;
       }
 
@@ -3557,8 +4359,56 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         note: typeof row.note === "string" ? row.note.trim() : "",
       }));
 
-      const convertToDubaiTime = (date) =>
-        date ? dayjs(date).tz("Asia/Dubai").format("DD-MM-YYYY") : "N/A";
+      const formatDate = (dateStr) => {
+        // Check if the string matches DD-MM-YYYY format
+        const datePattern = /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/;
+        if (typeof dateStr === "string" && datePattern.test(dateStr)) {
+          return dateStr; // Already in correct format
+        }
+        return "N/A"; // Invalid or empty
+      };
+
+      const installationDate = formatDate(values.installationDate);
+      const departureDate = formatDate(values.departureDate);
+      const returnDate = formatDate(values.returnDate);
+
+      // console.log("Installation Date (final):", installationDate);
+      // console.log("Departure Date (final):", departureDate);
+      // console.log("Return Date (final):", returnDate);
+
+      if ([installationDate, departureDate, returnDate].includes("N/A")) {
+        notification.error({
+          message: "Error",
+          description: "Please enter valid dates in DD-MM-YYYY format.",
+          placement: "bottomRight",
+        });
+        stopSubmitting();
+
+        return;
+      }
+
+      const endTime = dayjs();
+      const endTimeFormatted = endTime.format("DD-MM-YYYY HH:mm:ss");
+
+      let durationMinutes = 0;
+      let parsedStart = null;
+
+      if (startTime) {
+        parsedStart = dayjs(startTime, "DD-MM-YYYY HH:mm:ss", true);
+      }
+
+      if (parsedStart?.isValid()) {
+        durationMinutes = endTime.diff(parsedStart, "minute");
+      }
+
+      const hours = Math.floor(durationMinutes / 60);
+      const minutes = durationMinutes % 60;
+      const durationReadable =
+        hours > 0 ? `${hours}hr ${minutes}min` : `${minutes}min`;
+
+      const startTimeFormatted = parsedStart?.isValid()
+        ? parsedStart.format("DD-MM-YYYY HH:mm:ss")
+        : "";
 
       // ✅ 1. Upload image separately to Drive
       let causeImageUrl = "";
@@ -3566,14 +4416,15 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         const uploadResult = await uploadImageBase64(causeOfFailureImage);
 
         if (!uploadResult.success) {
-          // message.error("Image upload failed: " + uploadResult.message);
           notification.error({
             message: "Error",
             // description: "Image upload failed: " + uploadResult.message,
             description: `Image upload failed: ${uploadResult.message}`,
             placement: "bottomRight",
           });
-          setIsSubmitting(false);
+          // setIsSubmitting(false);
+          stopSubmitting();
+
           return;
         }
         causeImageUrl = uploadResult.imageUrl;
@@ -3582,37 +4433,34 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       // ✅ 2. Build form payload
       const formData = new FormData();
       formData.append("action", "new");
-      formData.append("srn", srn);
+      // formData.append("srn", srn);
       formData.append("customerName", values.customerName);
       formData.append("machineType", values.machineType);
       formData.append("address", address);
       formData.append("serialNumber", values.serialNumber);
       formData.append("contact", values.contact);
-      formData.append(
-        "installationDate",
-        convertToDubaiTime(values.installationDate)
-      );
+
+      formData.append("installationDate", installationDate);
+
       formData.append("telephone", values.telephone);
       formData.append("workTime", values.workTime);
-      // formData.append("serviceTechnician", values.serviceTechnician);
       formData.append("serviceTechnician", values.serviceTechnician.join(", "));
 
-      formData.append(
-        "departureDate",
-        convertToDubaiTime(values.departureDate)
-      );
-      formData.append("returnDate", convertToDubaiTime(values.returnDate));
+      formData.append("departureDate", departureDate);
+
+      formData.append("returnDate", returnDate);
+
       formData.append("description", descriptionText);
       formData.append("notes", notes);
       formData.append(
         "causeOfFailure",
         JSON.stringify({ text: causeOfFailureText })
       );
-      formData.append("causeImageUrl", causeImageUrl); // ✅ link to uploaded image
+      formData.append("causeImageUrl", causeImageUrl);
       formData.append(
         "filename",
         causeOfFailureImage?.name || "uploaded_image.png"
-      ); // ✅ NEW
+      );
       formData.append("partsUsed", JSON.stringify(cleanedPartsUsed));
 
       [...reportOptions, ...serviceOptions].forEach((option) => {
@@ -3625,10 +4473,23 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         );
       });
 
+      formData.append("userEmail", user?.email || "unknown");
+
+      formData.append("startTime", startTimeFormatted);
+      formData.append("endTime", endTimeFormatted);
+
+      //Don't Delete
+      // formData.append("durationMinutesNumeric", String(durationMinutes));
+
+      formData.append("durationMinutes", durationReadable);
+
+      // formData.append("durationMinutes", durationMinutes.toString());
+
       // setLoading(true);
 
       const res = await fetch(
-        "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+        // "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+        GAS_URL,
         {
           method: "POST",
           body: formData,
@@ -3637,19 +4498,19 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
 
       const result = await res.json();
 
-      if (!result.success) {
-        // message.error(result.message || "Submission failed.");
+      if (!result.success || !result.srn) {
         notification.error({
           message: "Error",
-          description: result.message || "Form Submission failed.",
+          description:
+            result.message || "Form submission failed. No SRN returned.",
           placement: "bottomRight",
         });
-        // alert("Error: " + result.message);
+        stopSubmitting();
+
         return;
       }
 
-      // message.success("Form submitted successfully!");
-
+      const newSRN = result.srn;
       notification.success({
         message: "Success",
         description: "Form submitted successfully!",
@@ -3675,18 +4536,19 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       values.serviceType?.forEach((option) => (checkboxValues[option] = true));
 
       const pdfPayload = {
-        srn,
+        srn: newSRN,
         customerName: values.customerName,
         machineType: values.machineType,
         address,
         serialNumber: values.serialNumber,
         contact: values.contact,
-        installationDate: convertToDubaiTime(values.installationDate),
+        installationDate,
         telephone: values.telephone,
         workTime: values.workTime,
         serviceTechnician: values.serviceTechnician,
-        departureDate: convertToDubaiTime(values.departureDate),
-        returnDate: convertToDubaiTime(values.returnDate),
+
+        departureDate,
+        returnDate,
         description: descriptionText,
         notes,
         causeOfFailure: causeOfFailureText,
@@ -3694,9 +4556,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         signatures,
       };
 
-      await generatePDF(pdfPayload, checkboxValues, cleanedPartsUsed);
+      await generatePDF(pdfPayload, checkboxValues, cleanedPartsUsed, newSRN);
 
-      // ✅ 4. Reset form
       form.resetFields();
       setAddress("");
       setSerialNumber("");
@@ -3724,17 +4585,32 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       setIsTechnicianSignSaved(false);
       setIsCustomerSignSaved(false);
       setIsManagerSignUploaded(false);
+      setStartTime(null);
+
       await fetchSRN();
       loadAllCustomerData();
     } catch (err) {
-      // console.error("Submission error:", err);
-      // message.error("Something went wrong.");
+   let errorMsg;
 
-      notification.error({
-        message: "Error",
-        description: "Oops, something went wrong!",
-        placement: "bottomRight",
-      });
+  if (!navigator.onLine) {
+    // Browser knows it's offline
+    errorMsg = "You are offline. Please check your internet connection.";
+  } else if (err.message.includes("Failed to fetch") || err.message.includes("ERR_INTERNET_DISCONNECTED")) {
+    // Covers cases where fetch fails due to disconnection
+    errorMsg = "Network error: Unable to reach the server. Please check your connection.";
+  } else {
+    // Fallback: show the real error
+    errorMsg = err.message || "Unknown error occurred.";
+  }
+
+  notification.error({
+    message: "Error",
+    description: errorMsg,
+    placement: "bottomRight",
+    duration: 0,
+  });
+
+  // console.error("Form submission failed:", err);
     } finally {
       setLoading(false);
       setIsSubmitting(false);
@@ -3756,7 +4632,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
     loadAllCustomerData();
   };
 
-  
   const handleEditSubmit = async () => {
     try {
       setIsEditSubmitting(true);
@@ -3772,10 +4647,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         (values["notes/further action required"]?.length || 0) > 200;
 
       if (isTooLong) {
-        // message.error(
-        //   "Some inputs exceed allowed limits. Please fix them before submitting."
-        // );
-
         notification.error({
           message: "Error",
           description:
@@ -3800,10 +4671,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         !isEditManagerSignSaved ||
         managerEmpty
       ) {
-        // message.error(
-        //   "The manager's signature must be uploaded. The technician's and customer's signatures must be saved before submitting."
-        // );
-
         notification.error({
           message: "Error",
           description:
@@ -3816,12 +4683,22 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         return;
       }
 
-      const convertToDubaiTime = (date) =>
-        date ? dayjs(date).tz("Asia/Dubai").format("DD-MM-YYYY") : "N/A";
+      const formatDate = (dateStr) => {
+        // Check if the string matches DD-MM-YYYY format
+        const datePattern = /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/;
+        if (typeof dateStr === "string" && datePattern.test(dateStr)) {
+          return dateStr; // Already in correct format
+        }
+        return "N/A"; // Invalid or empty
+      };
 
-      const installationDate = convertToDubaiTime(values.installationDate);
-      const departureDate = convertToDubaiTime(values.departureDate);
-      const returnDate = convertToDubaiTime(values.returnDate);
+      const installationDate = formatDate(values.installationDate);
+      const departureDate = formatDate(values.departureDate);
+      const returnDate = formatDate(values.returnDate);
+
+      // console.log("Installation Date (final):", installationDate);
+      // console.log("Departure Date (final):", departureDate);
+      // console.log("Return Date (final):", returnDate);
 
       const cleanedPartsUsed = (editTabledata || []).map((row) => ({
         partNumber: row?.partNumber?.toString().trim() || "",
@@ -3835,7 +4712,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       if (isEditImageMarkedForDeletion && editViewUrl) {
         try {
           const deleteRes = await fetch(
-            "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+            // "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+            GAS_URL,
             {
               method: "POST",
               headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -3850,14 +4728,12 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
           // console.log("Image deletion result:", result);
 
           if (result.success) {
-            // message.success("Image deleted from Drive.");
             notification.success({
               message: "Success",
               description: "Image deleted from Drive.",
               placement: "bottomRight",
             });
           } else {
-            // message.warning("Image deletion failed: " + result.message);
             notification.warning({
               message: "Warning",
               description: `Image deletion failed: ${result.message}`,
@@ -3866,7 +4742,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
           }
         } catch (err) {
           // console.error("Image deletion request failed:", err);
-          // message.error("Failed to delete image from Drive.");
 
           notification.error({
             message: "Error",
@@ -3876,7 +4751,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         }
       }
 
-      // ✅ Prepare Cause of Failure text
       let updatedCauseText = editCauseText?.trim() || "";
 
       if (
@@ -3892,8 +4766,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
           const newImageUrl = result.imageUrl;
           updatedCauseText += `\nImage: ${newImageUrl}\nFilename: ${fileToUpload.name}`;
         } else {
-          // message.error("Image upload failed, submission aborted.");
-
           notification.error({
             message: "Error",
             description: "Image upload failed, submission aborted.",
@@ -3931,6 +4803,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       );
       formData.append("notes", values["notes/further action required"]);
       formData.append("causeOfFailure", updatedCauseText);
+      formData.append("userEmail", user?.email || "N/A");
 
       partsUsed.forEach((part, index) => {
         formData.append(`Part Number[${index}]`, part.partNumber);
@@ -4003,12 +4876,30 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       setEditSignatureManager(null);
       loadAllCustomerData();
     } catch (err) {
-      // message.error("Failed to submit update: " + err.message);
-      notification.error({
-        message: "Error",
-        description: "Failed to submit update: " + err.message,
-        placement: "bottomRight",
-      });
+      // notification.error({
+      //   message: "Error",
+      //   description: "Failed to submit update: " + err.message,
+      //   placement: "bottomRight",
+      // });
+       let errorMsg;
+
+  if (!navigator.onLine) {
+    errorMsg = "You are offline. Please check your internet connection.";
+  } else if (
+    err.message.includes("Failed to fetch") ||
+    err.message.includes("ERR_INTERNET_DISCONNECTED")
+  ) {
+    errorMsg = "Network error: Unable to reach the server. Please try again later.";
+  } else {
+    errorMsg = err?.message || "Unknown error occurred.";
+  }
+
+  notification.error({
+    message: "Error",
+    description: errorMsg,
+    placement: "bottomRight",
+  });
+
     } finally {
       setIsEditSubmitting(false);
       setEditLoading(false);
@@ -4017,7 +4908,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
 
   const postUpdate = async (formData) => {
     const res = await fetch(
-      "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      // "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      GAS_URL,
       {
         method: "POST",
         body: formData,
@@ -4026,7 +4918,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
     const result = await res.json();
     if (result.success) {
       await loadAllCustomerData();
-      // message.success("Form updated successfully!");
       notification.success({
         message: "Success",
         description: "Form updated successfully!",
@@ -4036,7 +4927,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       setEditModalOpen(false);
       hasInitializedEditForm.current = false;
     } else {
-      // message.error("Update failed: " + result.message);
       notification.error({
         message: "Error",
         description: "Update failed: " + result.message,
@@ -4047,7 +4937,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
 
   const submitUpdate = async (payload) => {
     const res = await fetch(
-      "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      // "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      GAS_URL,
       {
         method: "POST",
         body: new URLSearchParams(payload),
@@ -4056,7 +4947,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
 
     const result = await res.json();
     if (result.success) {
-      // message.success("Record updated.");
       notification.success({
         message: "Success",
         description: "Record updated successfully!",
@@ -4077,7 +4967,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
     payload.append("imageUrl", url);
 
     const res = await fetch(
-      "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      // "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+      GAS_URL,
       {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -4090,7 +4981,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
   };
 
   const handleDownloadPDF = async (srn) => {
-    // if (!srn) return message.error("SRN is missing.");
+    setDownloadLoader(true);
     if (!srn) {
       notification.error({
         message: "Error",
@@ -4106,7 +4997,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
 
     try {
       const res = await fetch(
-        "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+        // "https://script.google.com/macros/s/AKfycbwYvP76g3eK_AdvEtm3Yn22EVyMfRggjESP7yQqMLrObh5cXcLLvoih8Q6rjVaGjhWdVA/exec",
+        GAS_URL,
         {
           method: "POST",
           headers: {
@@ -4119,7 +5011,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       if (result.success && result.url) {
         window.open(result.url, "_blank");
       } else {
-        // message.error(result.message || "Failed to retrieve PDF.");
         notification.error({
           message: "Error",
           description: result.message || "Failed to retrieve PDF.",
@@ -4127,12 +5018,13 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
         });
       }
     } catch (error) {
-      // message.error("Error fetching PDF link.");
       notification.error({
         message: "Error",
         description: "Error fetching PDF link.",
         placement: "bottomRight",
       });
+    }finally{
+      setDownloadLoader(false);
     }
   };
 
@@ -4157,30 +5049,159 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
   return (
     <>
       <style>{styl}</style>
+
       <div className="container-fluid pb-1">
         <div className="container-fluid border shadow rounded-5  mt-3 pt-3 mb-3 pb-3">
           <div className="container-fluid">
-            <div className="row d-flex align-items-center justify-content-between">
-              <div className="col-7 col-md-6 col-lg-6 col-xl-6">
+            {/* Header */}
+            <div className="row d-flex align-items-center justify-content-center">
+              {/* Logo */}
+              <div className="col-5 col-md-5 col-lg-5 col-xl-5">
                 <img
                   src={HaitianLogo}
                   alt="HaitianLogo"
                   className="img-fluid haitianLogo"
                 />
               </div>
-              {/* <div className="col-12 col-lg-3"></div> */}
-              <div className="col-4 col-md-3 col-lg-3 col-xl-2 d-flex flex-column align-items-lg-start ">
+
+              {/* Title */}
+              <div className="col-5 col-md-5 col-lg-5 col-xl-5 ">
                 <p
-                  className="header_Service_Text m-0 p-0 ms-xl-4"
-                  style={{ color: "#0D3884" }}
+                  className="header_Service_Text m-0 p-0"
+                  style={{ color: "#0D3884", fontWeight: "bold" }}
                 >
-                  Service Report
+                  Service Report No: {srn || "Loading..."}
                 </p>
-                <span className="ms-xl-4">
-                  <strong style={{ color: "#0D3884" }}>
-                    No: {srn || "Loading..."}
-                  </strong>
-                </span>
+              </div>
+
+              {/* Avatar with Dropdown */}
+              <div className="col-2 col-md-2 col-lg-2 col-xl-2 text-end">
+                <Dropdown
+                  placement="bottomRight"
+                  open={open}
+                  onOpenChange={(flag) => setOpen(flag)}
+                  trigger={["click"]}
+                  dropdownRender={() => {
+                    const email = user?.email || "";
+                    const initials = email.substring(0, 2).toUpperCase();
+                    const username = email.split("@")[0];
+
+                    return (
+                      <div
+                        style={{
+                          minWidth: 250,
+                          borderRadius: 12,
+                          overflow: "hidden",
+                          boxShadow: "0 6px 18px rgba(0,0,0,0.15)",
+                        }}
+                      >
+                        {/* Gradient Header */}
+                        <div
+                          style={{
+                            background: "#0d3884",
+                            color: "#fff",
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "16px",
+                          }}
+                        >
+                          <Avatar
+                            size={48}
+                            style={{
+                              backgroundColor: "transparent",
+                              border: "2px solid #fff",
+                              color: "#fff",
+                              fontWeight: "bold",
+                              marginRight: 12,
+                            }}
+                          >
+                            {initials}
+                          </Avatar>
+                          <div>
+                            <div style={{ fontSize: 12, opacity: 0.9 }}>
+                              Welcome back
+                            </div>
+                            <Tooltip title={username}>
+                              <div
+                                style={{
+                                  fontWeight: 600,
+                                  fontSize: 16,
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  maxWidth: 150, // <-- limit width
+                                }}
+                              >
+                                {username}
+                              </div>
+                            </Tooltip>
+                          </div>
+                        </div>
+
+                        {/* Body */}
+                        <div style={{ background: "#fff", padding: "16px" }}>
+                          {/* Email */}
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              marginBottom: 16,
+                              maxWidth: 200, // control width
+                            }}
+                          >
+                            <MailOutlined
+                              style={{ marginRight: 8, color: "#444" }}
+                            />
+                            <Tooltip title={email}>
+                              <span
+                                style={{
+                                  fontSize: 14,
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  display: "inline-block",
+                                  maxWidth: "160px", // adjust to fit design
+                                  verticalAlign: "bottom",
+                                }}
+                              >
+                                {email}
+                              </span>
+                            </Tooltip>
+                          </div>
+
+                          {/* Logout Button */}
+                          <Button
+                            type="primary"
+                            danger
+                            block
+                            icon={<LogoutOutlined />}
+                            onClick={() => {
+                              setOpen(false);
+                              onLogout();
+                            }}
+                            style={{
+                              borderRadius: 8,
+                              fontWeight: 500,
+                            }}
+                          >
+                            Logout
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }}
+                >
+                  <Avatar
+                    size="large"
+                    style={{
+                      backgroundColor: "#0D3884",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {user.email?.substring(0, 2).toUpperCase()}
+                  </Avatar>
+                </Dropdown>
               </div>
             </div>
           </div>
@@ -4191,6 +5212,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                   form={form}
                   layout="vertical"
                   onFinish={handleSubmit}
+                  onValuesChange={handleFirstInput}
                   disabled={loading || isSubmittingRef.current}
                 >
                   <div className="row ">
@@ -4243,7 +5265,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                                 telephone: "",
                                 machineType: "",
                                 serialNumber: "",
-                                installationDate: null,
+                                // installationDate: null,
+                                installationDate: "",
                               });
                               setAddress("");
                               setSerialNumber("");
@@ -4267,9 +5290,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                                 machineType: matched["Machine Type"] || "",
                                 serialNumber: matched["Serial Number"] || "",
 
-                                installationDate: parseDate(
-                                  matched["Installation Date"]
-                                ),
+                                installationDate:
+                                  matched["Installation Date"] || "",
                               });
                               setAddress(matched["Address"] || "");
                               setSerialNumber(matched["Serial Number"] || "");
@@ -4391,33 +5413,23 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                         rules={[
                           {
                             required: true,
-                            message: "Please select the installation date",
+                            message: "Please enter installation date",
+                          },
+                          {
+                            pattern:
+                              /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/,
+                            message: "Enter date in DD-MM-YYYY format",
                           },
                         ]}
                       >
-                        <DatePicker
-                          className="w-100"
-                          // showTime
-                          format="DD-MM-YYYY" // Dubai Time Format
-                          value={
-                            form.getFieldValue("installationDate")
-                              ? dayjs(
-                                  form.getFieldValue("installationDate")
-                                ).tz("Asia/Dubai")
-                              : dayjs().tz("Asia/Dubai") // Default to Dubai Time
+                        <Input
+                          placeholder="DD-MM-YYYY"
+                          value={form.getFieldValue("installationDate") || ""}
+                          onChange={(e) =>
+                            form.setFieldsValue({
+                              installationDate: e.target.value,
+                            })
                           }
-                          onChange={(date) => {
-                            if (date) {
-                              const dubaiTime = dayjs(date).tz("Asia/Dubai");
-                              // console.log(
-                              //   "Selected Dubai Time:",
-                              //   dubaiTime.format("YYYY-MM-DD hh:mm A")
-                              // );
-                              form.setFieldsValue({
-                                installationDate: dubaiTime,
-                              });
-                            }
-                          }}
                         />
                       </Form.Item>
 
@@ -4432,7 +5444,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                       </Form.Item>
                     </div>
 
-                    
                     <div className="col-12 col-lg-4">
                       <Form.Item
                         label="Service Technician"
@@ -4474,32 +5485,23 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                         rules={[
                           {
                             required: true,
-                            message: "Please select the departure date",
+                            message: "Please enter departure date",
+                          },
+                          {
+                            pattern:
+                              /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/,
+                            message: "Enter date in DD-MM-YYYY format",
                           },
                         ]}
                       >
-                        <DatePicker
-                          className="w-100"
-                          // showTime
-                          // format="YYYY-MM-DD" // Dubai Time Format
-                          format="DD-MM-YYYY" // Dubai Time Format
-                          value={
-                            form.getFieldValue("departureDate")
-                              ? dayjs(form.getFieldValue("departureDate")).tz(
-                                  "Asia/Dubai"
-                                )
-                              : dayjs().tz("Asia/Dubai") // Default to Dubai Time
+                        <Input
+                          placeholder="DD-MM-YYYY"
+                          value={form.getFieldValue("departureDate") || ""}
+                          onChange={(e) =>
+                            form.setFieldsValue({
+                              departureDate: e.target.value,
+                            })
                           }
-                          onChange={(date) => {
-                            if (date) {
-                              const dubaiTime = dayjs(date).tz("Asia/Dubai");
-                              // console.log(
-                              //   "Selected Dubai Time:",
-                              //   dubaiTime.format("YYYY-MM-DD hh:mm A")
-                              // );
-                              form.setFieldsValue({ departureDate: dubaiTime });
-                            }
-                          }}
                         />
                       </Form.Item>
                     </div>
@@ -4511,32 +5513,21 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                         rules={[
                           {
                             required: true,
-                            message: "Please select the return date",
+                            message: "Please enter return date",
+                          },
+                          {
+                            pattern:
+                              /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/,
+                            message: "Enter date in DD-MM-YYYY format",
                           },
                         ]}
                       >
-                        <DatePicker
-                          className="w-100"
-                          // showTime
-                          // format="YYYY-MM-DD" // Dubai Time Format
-                          format="DD-MM-YYYY"
-                          value={
-                            form.getFieldValue("returnDate")
-                              ? dayjs(form.getFieldValue("returnDate")).tz(
-                                  "Asia/Dubai"
-                                )
-                              : dayjs().tz("Asia/Dubai") // Default to Dubai Time
+                        <Input
+                          placeholder="DD-MM-YYYY"
+                          value={form.getFieldValue("returnDate") || ""}
+                          onChange={(e) =>
+                            form.setFieldsValue({ returnDate: e.target.value })
                           }
-                          onChange={(date) => {
-                            if (date) {
-                              const dubaiTime = dayjs(date).tz("Asia/Dubai");
-                              // console.log(
-                              //   "Selected Dubai Time:",
-                              //   dubaiTime.format("YYYY-MM-DD hh:mm A")
-                              // );
-                              form.setFieldsValue({ returnDate: dubaiTime });
-                            }
-                          }}
                         />
                       </Form.Item>
                     </div>
@@ -4614,7 +5605,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                             icon={<DeleteOutlined />}
                             variant="solid"
                             color="danger"
-                            // onClick={handleRemoveImage}
                             onClick={handleRemoveCauseImage}
                             style={{ marginTop: 5 }}
                           ></Button>
@@ -4655,7 +5645,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                     <div className="col-12 mt-4">
                       <Form.Item
                         label="Service Type"
-                        name="serviceType" // This is the field name
+                        name="serviceType"
                         rules={[
                           {
                             required: true,
@@ -4816,7 +5806,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
       <div className="container-fluid pb-1">
         <div className="container-fluid  border shadow rounded-5  mt-5  mb-3 pb-3">
           <div className="row d-flex align-items-center justify-content-center bg-light rounded-top-5 rounded-right-5">
-            {/* <div className="col-12 col-lg-3"></div> */}
             <div className="col-12 col-md-12 col-lg-12 col-xl-12  d-flex flex-column align-items-center justify-content-center p-2">
               <div className="fw-bold text-center">
                 <img
@@ -4848,15 +5837,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                 className="haitianbutton"
                 size="large"
                 icon={<ExportOutlined />}
-                onClick={() => {
-                  handleExportToExcel();
-                  // message.success("Data Exported Successfully");
-                  notification.success({
-                    message: "Success",
-                    description: "Data Exported Successfully",
-                    placement: "bottomRight",
-                  });
-                }}
+                onClick={handleExportToExcel}
                 style={{ marginLeft: 8, backgroundColor: "#0D3884 !important" }}
               >
                 Export
@@ -4865,7 +5846,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
               <div>
                 <Button
                   size="large"
-                  icon={<FilterOutlined />}
+                  icon={<ClearOutlined />}
                   onClick={() => {
                     setSearchText("");
                     setSearchInstallationDate(null);
@@ -4875,14 +5856,12 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                       searchInstallationDate === null &&
                       searchSRN === ""
                     ) {
-                      // message.info("No search input found");
                       notification.info({
                         message: "No Input",
                         description: "No search input found",
                         placement: "bottomRight",
                       });
                     } else {
-                      // message.success("Search inputs are cleared");
                       notification.success({
                         message: "Success",
                         description: "Search inputs are cleared",
@@ -4912,22 +5891,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                 size="large"
               />
             </div>
-            <div className="col-12 col-md-3 col-lg-3 mt-4 mt-lg-3">
-              <DatePicker
-                placeholder="Search by Installation Date"
-                format="DD-MM-YYYY"
-                value={searchInstallationDate}
-                onChange={(date) => {
-                  setSearchInstallationDate(date);
-                  handleSearchAndFilter();
-                }}
-                size="large"
-                style={{ width: "100%" }}
-                className="mt-md-2 mt-lg-0"
-              />
-            </div>
 
-            <div className="col-12 col-md-3 col-lg-3 mt-4 mt-lg-3">
+            <div className="col-12 col-md-6 col-lg-6 mt-4 mt-lg-3">
               <Input
                 type="number"
                 placeholder="Search by SRN"
@@ -4949,7 +5914,8 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
             <div className="col-12">
               <div className="mt-3">
                 <Table
-                  dataSource={customerDataList}
+                  // dataSource={customerDataList}
+                  dataSource={reportDataList}
                   loading={refreshing}
                   columns={Tablecolumns}
                   rowKey={(record) => record["Service Request Number"]}
@@ -5019,11 +5985,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                       label="Installation Date"
                       name="installationDate"
                     >
-                      <DatePicker
-                        className="w-100"
-                        format="DD-MM-YYYY"
-                        disabled
-                      />
+                      <Input disabled />
                     </Form.Item>
 
                     <Form.Item label="Work Time" name="workTime">
@@ -5043,21 +6005,13 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
 
                   <div className="col-12 col-lg-4">
                     <Form.Item label="Departure Date" name="departureDate">
-                      <DatePicker
-                        className="w-100"
-                        format="DD-MM-YYYY"
-                        disabled
-                      />
+                      <Input disabled />
                     </Form.Item>
                   </div>
 
                   <div className="col-12 col-lg-4">
                     <Form.Item label="Return Date" name="returnDate">
-                      <DatePicker
-                        className="w-100"
-                        format="DD-MM-YYYY"
-                        disabled
-                      />
+                      <Input disabled />
                     </Form.Item>
                   </div>
 
@@ -5129,8 +6083,10 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                       icon={<DownloadOutlined />}
                       onClick={() => handleDownloadPDF(editsrn)}
                       className="haitianbutton"
+                      loading={downloadLoader}
+                      disabled={downloadLoader}
                     >
-                      Download PDF
+                      {downloadLoader ? "Downloading..." : "Download PDF"}
                     </Button>
                     <Button
                       size="large"
@@ -5150,7 +6106,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
               onCancel={handleEditModalclose}
               footer={null}
             >
-              {/* <h3>Edit Service Form Record</h3> */}
               <div className="col-12 col-lg-8 text-center m-auto">
                 <img
                   src={HaitianLogo}
@@ -5279,32 +6234,23 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                       rules={[
                         {
                           required: true,
-                          message: "Please select the installation date",
+                          message: "Please enter installation date",
+                        },
+                        {
+                          pattern:
+                            /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/,
+                          message: "Enter date in DD-MM-YYYY format",
                         },
                       ]}
                     >
-                      <DatePicker
-                        className="w-100"
-                        format="DD-MM-YYYY" // Dubai Time Format
-                        value={
-                          editForm.getFieldValue("installationDate")
-                            ? dayjs(
-                                editForm.getFieldValue("installationDate")
-                              ).tz("Asia/Dubai")
-                            : dayjs().tz("Asia/Dubai") // Default to Dubai Time
+                      <Input
+                        placeholder="DD-MM-YYYY"
+                        value={editForm.getFieldValue("installationDate") || ""}
+                        onChange={(e) =>
+                          editForm.setFieldsValue({
+                            installationDate: e.target.value,
+                          })
                         }
-                        onChange={(date) => {
-                          if (date) {
-                            const dubaiTime = dayjs(date).tz("Asia/Dubai");
-                            // console.log(
-                            //   "Selected Dubai Time:",
-                            //   dubaiTime.format("YYYY-MM-DD hh:mm A")
-                            // );
-                            editForm.setFieldsValue({
-                              installationDate: dubaiTime,
-                            });
-                          }
-                        }}
                       />
                     </Form.Item>
 
@@ -5320,7 +6266,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                   </div>
 
                   <div className="col-12 col-lg-4">
-                    
                     <Form.Item
                       label="Service Technician"
                       name="serviceTechnician"
@@ -5344,6 +6289,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                           "Balaji",
                           "Eswar",
                           "SivaSundar",
+                          "Sunderesh",
                         ].map((tech) => (
                           <Select.Option
                             key={tech}
@@ -5367,32 +6313,23 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                       rules={[
                         {
                           required: true,
-                          message: "Please select the departure date",
+                          message: "Please enter departure Date",
+                        },
+                        {
+                          pattern:
+                            /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/,
+                          message: "Enter date in DD-MM-YYYY format",
                         },
                       ]}
                     >
-                      <DatePicker
-                        className="w-100"
-                        format="DD-MM-YYYY" // Dubai Time Format
-                        value={
-                          editForm.getFieldValue("departureDate")
-                            ? dayjs(editForm.getFieldValue("departureDate")).tz(
-                                "Asia/Dubai"
-                              )
-                            : dayjs().tz("Asia/Dubai") // Default to Dubai Time
+                      <Input
+                        placeholder="DD-MM-YYYY"
+                        value={editForm.getFieldValue("departureDate") || ""}
+                        onChange={(e) =>
+                          editForm.setFieldsValue({
+                            departureDate: e.target.value,
+                          })
                         }
-                        onChange={(date) => {
-                          if (date) {
-                            const dubaiTime = dayjs(date).tz("Asia/Dubai");
-                            // console.log(
-                            //   "Selected Dubai Time:",
-                            //   dubaiTime.format("YYYY-MM-DD hh:mm A")
-                            // );
-                            editForm.setFieldsValue({
-                              departureDate: dubaiTime,
-                            });
-                          }
-                        }}
                       />
                     </Form.Item>
                   </div>
@@ -5402,34 +6339,22 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                       label="Return Date"
                       name="returnDate"
                       rules={[
+                        { required: true, message: "Please enter return date" },
                         {
-                          required: true,
-                          message: "Please select the return date",
+                          pattern:
+                            /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-\d{4}$/,
+                          message: "Enter date in DD-MM-YYYY format",
                         },
                       ]}
                     >
-                      <DatePicker
-                        className="w-100"
-                        // showTime
-                        // format="YYYY-MM-DD" // Dubai Time Format
-                        format="DD-MM-YYYY"
-                        value={
-                          editForm.getFieldValue("returnDate")
-                            ? dayjs(editForm.getFieldValue("returnDate")).tz(
-                                "Asia/Dubai"
-                              )
-                            : dayjs().tz("Asia/Dubai") // Default to Dubai Time
+                      <Input
+                        placeholder="DD-MM-YYYY"
+                        value={editForm.getFieldValue("returnDate") || ""}
+                        onChange={(e) =>
+                          editForm.setFieldsValue({
+                            returnDate: e.target.value,
+                          })
                         }
-                        onChange={(date) => {
-                          if (date) {
-                            const dubaiTime = dayjs(date).tz("Asia/Dubai");
-                            // console.log(
-                            //   "Selected Dubai Time:",
-                            //   dubaiTime.format("YYYY-MM-DD hh:mm A")
-                            // );
-                            editForm.setFieldsValue({ returnDate: dubaiTime });
-                          }
-                        }}
                       />
                     </Form.Item>
                   </div>
@@ -5463,7 +6388,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                     <TextArea
                       placeholder="Enter the description of work/of defect/failure mode"
                       value={descriptionText}
-                      // onChange={handleDescriptionTextChange}
                       onChange={handleEditDescriptionChange}
                       autoSize={{ minRows: 5, maxRows: 5 }}
                       maxLength={995}
@@ -5474,7 +6398,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                   <Form.Item label="Cause of Failure">
                     <Input.TextArea
                       value={editCauseText}
-                      // onChange={(e) => setEditCauseText(e.target.value)}
                       onChange={handleEditCauseTextChange}
                       placeholder="Describe the failure"
                       autoSize={{ minRows: 3, maxRows: 3 }}
@@ -5499,7 +6422,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                           title="Are you sure you want to delete this image?"
                           okText="Yes"
                           cancelText="No"
-                          onConfirm={handleEditImageDelete} // ✅ Use the new function
+                          onConfirm={handleEditImageDelete}
                         >
                           <Button
                             size="small"
@@ -5520,7 +6443,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                           const isLtMaxSize = file.size / 1024 / 1024 < 5;
 
                           if (!isImage) {
-                            // message.error("Only image files are allowed.");
                             notification.error({
                               message: "Error",
                               description: "Only image files are allowed.",
@@ -5530,7 +6452,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                             return Upload.LIST_IGNORE;
                           }
                           if (!isLtMaxSize) {
-                            // message.error("Image must be smaller than 5MB!");
                             notification.error({
                               message: "Error",
                               description: "Image must be smaller than 5MB!",
@@ -5579,7 +6500,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                     <TextArea
                       placeholder="Enter the notes/further action required"
                       value={notes}
-                      // onChange={handleNotesChange}
                       onChange={handleEditNotesChange}
                       autoSize={{ minRows: 3, maxRows: 3 }}
                       maxLength={195}
@@ -5599,7 +6519,7 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                   <div className="col-12 mt-4">
                     <Form.Item
                       label="Service Type"
-                      name="serviceType" // This is the field name
+                      name="serviceType"
                       rules={[
                         {
                           required: true,
@@ -5626,7 +6546,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                       <div className="d-flex justify-content-start justify-content-md-start justify-content-lg-start  gap-2 mt-1">
                         <Button
                           className="haitianbutton"
-                          // onClick={saveTechnicianSignature}
                           onClick={saveEditTechnicianSignature}
                           disabled={isEditSubmitting}
                         >
@@ -5635,7 +6554,6 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
                         <Button
                           className="dangerbutton"
                           danger
-                          // onClick={clearTechnicianSignature}
                           onClick={clearEditTechnicianSignature}
                           disabled={isEditSubmitting}
                         >
@@ -5761,23 +6679,85 @@ const fileName = `HT Service Report ${sanitizedEditCustomerName} ${editsrn || "N
               </Form>
             </Modal>
           </div>
-        </div>
-        <div className="text-center mt-2">
-            <p className="text-center m-0 p-0" style={{ fontSize: "14px", color:"#0D3884" }}>
-            Haitian Service Report Form Version: 2.00
-            
-          </p>
-          <p className="text-center m-0 p-0 mt-1" style={{ fontSize: "14px", color:"#0D3884"  }}>
-            Crafted and Maintained by{" "}
-            <a
-              href="https://www.stratifytechno.com/"
-              target="_blank"
-              className="text-primary"
-              style={{ textDecoration: "none" }}
-            >
-              Stratify Techologies
-            </a>
-          </p>
+
+          {user?.email === "admin@haitianme.com" && (
+            <div className="row mt-4">
+              <div
+                className="border border-top-5 mb-4 m-auto"
+                style={{ width: "99% !important" }}
+              ></div>
+              <div className="col-12 col-md-12 col-lg-6 d-flex justify-content-md-center justify-content-lg-start">
+                <h3 className="fw-bold" style={{ color: "#0D3884" }}>
+                  <DatabaseFilled className="mt-3" /> Machine Registry Data
+                </h3>
+              </div>
+
+              <div className="col-12 col-md-12 col-lg-6 d-flex justify-content-md-center justify-content-lg-end mt-2 mt-lg-3">
+                <Button
+                  className="haitianbutton"
+                  size="large"
+                  loading={machineRegistryLoading}
+                  onClick={handleRegistryRefresh}
+                  icon={<ReloadOutlined />}
+                >
+                  {machineRegistryLoading ? "Refreshing..." : "Refresh"}
+                </Button>
+                <Button
+                  className="haitianbutton"
+                  size="large"
+                  icon={<ExportOutlined />}
+                  onClick={() =>
+                    exportMachineRegistryToExcel(machineRegistryDataFiltered)
+                  }
+                  style={{ marginLeft: 8 }}
+                >
+                  Export
+                </Button>
+                <Button
+                  size="large"
+                  icon={<ClearOutlined />}
+                  onClick={clearRegistrySearch}
+                  className="ms-2 dangerbutton"
+                >
+                  Clear Search
+                </Button>
+              </div>
+
+              <div className="col-12 col-md-6 col-lg-6 mt-4 mt-lg-3">
+                <Input
+                  placeholder="Search Machine Registry"
+                  prefix={<SearchOutlined />}
+                  allowClear
+                  value={registrySearch}
+                  onChange={(e) => setRegistrySearch(e.target.value)}
+                  style={{ width: "100%" }}
+                  size="large"
+                />
+              </div>
+              <div className="col-12 col-md-6 col-lg-6 mt-4 mt-lg-3">
+                <Input
+                  type="number"
+                  placeholder="Search by Service Request Number"
+                  prefix={<SearchOutlined />}
+                  allowClear
+                  value={registrySRNSearch}
+                  onChange={(e) => setRegistrySRNSearch(e.target.value)}
+                  style={{ width: "100%" }}
+                  size="large"
+                />
+              </div>
+
+              <div className="col-12 mt-3">
+                <Table
+                  columns={machineRegistryColumns}
+                  dataSource={machineRegistryDataFiltered ?? []}
+                  loading={machineRegistryLoading}
+                  rowKey={(record, index) => record["Serial Number"] ?? index}
+                  scroll={{ x: "max-content" }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
