@@ -180,7 +180,7 @@ export default function FormComponent({ onLogout, user }) {
 
 
   const GAS_URL =
-    "https://script.google.com/macros/s/AKfycby8E4NlBP1WauN6amuQMD2i22Uz9Xf46k0TGMKSgpvKqlT6gNkLVMX3MujYjW1e3n_HjA/exec";
+    "https://script.google.com/macros/s/AKfycbwoLh7D9LM2mjRqDiBqPkbibIi2adqmAjJdyI6waKPV51K0zIcr821DswWessAkSzwuqA/exec";
 
   const machineRegistryColumns = [
     { title: "Serial Number", dataIndex: "Serial Number" },
@@ -2443,7 +2443,7 @@ export default function FormComponent({ onLogout, user }) {
 
     // Define positions
     const startX = 10; // Left side
-    const rightX = 110; // Right side for machine details
+    const rightX = 120; // Right side for machine details
     let nextY = 25; // Starting Y position
 
     // Header
@@ -3007,7 +3007,7 @@ export default function FormComponent({ onLogout, user }) {
 
     // Define positions
     const startX = 10; // Left side
-    const rightX = 110; // Right side for machine details
+    const rightX = 120; // Right side for machine details
     let nextY = 25; // Starting Y position
 
     // Header
@@ -5463,13 +5463,13 @@ export default function FormComponent({ onLogout, user }) {
                           {
                             required: true,
                             message:
-                              "Please select up to 3 service technicians",
+                              "Please select up to 5 service technicians",
                           },
                         ]}
                       >
                         <Select
                           mode="multiple"
-                          placeholder="Select up to 3 technicians"
+                          placeholder="Select up to 5 technicians"
                           value={selectedTechnicians}
                           onChange={handleTechChange}
                         >
@@ -5478,7 +5478,7 @@ export default function FormComponent({ onLogout, user }) {
                               key={tech}
                               value={tech}
                               disabled={
-                                selectedTechnicians.length >= 3 &&
+                                selectedTechnicians.length >= 5 &&
                                 !selectedTechnicians.includes(tech)
                               }
                             >
@@ -6283,13 +6283,13 @@ export default function FormComponent({ onLogout, user }) {
                       rules={[
                         {
                           required: true,
-                          message: "Please select up to 3 service technicians",
+                          message: "Please select up to 5 service technicians",
                         },
                       ]}
                     >
                       <Select
                         mode="multiple"
-                        placeholder="Select up to 3 technicians"
+                        placeholder="Select up to 5 technicians"
                         value={selectedEditTechnicians}
                         onChange={(value) => setSelectedEditTechnicians(value)}
                       >
@@ -6306,7 +6306,7 @@ export default function FormComponent({ onLogout, user }) {
                             key={tech}
                             value={tech}
                             disabled={
-                              selectedEditTechnicians.length >= 3 &&
+                              selectedEditTechnicians.length >= 5 &&
                               !selectedEditTechnicians.includes(tech)
                             }
                           >
