@@ -180,7 +180,7 @@ export default function FormComponent({ onLogout, user }) {
 
 
   const GAS_URL =
-    "https://script.google.com/macros/s/AKfycbwoLh7D9LM2mjRqDiBqPkbibIi2adqmAjJdyI6waKPV51K0zIcr821DswWessAkSzwuqA/exec";
+    "https://script.google.com/macros/s/AKfycbynvZlNNwMqd1_YnFH5YpccP_YHgrGWEztHKqJdJJb82Stw2-mC9ReBd2HVoRZ2kwgc6w/exec";
 
   const machineRegistryColumns = [
     { title: "Serial Number", dataIndex: "Serial Number" },
@@ -2917,7 +2917,7 @@ export default function FormComponent({ onLogout, user }) {
 
     // **Third Row: Contact Information - Centered**
     doc.text(
-      "Phone: +971 656 222 38  Email: ask@haitianme.com  Web: www.haitianme.com",
+      "Phone: +971 688 457 78  Email: ask@haitianme.com  Web: www.haitianme.com",
       centerX, // Proper centering
       footerY + 11,
       { align: "center" }
@@ -3479,7 +3479,7 @@ export default function FormComponent({ onLogout, user }) {
 
     // **Third Row: Contact Information - Centered**
     doc.text(
-      "Phone: +971 656 222 38  Email: ask@haitianme.com  Web: www.haitianme.com",
+      "Phone: +971 688 457 78  Email: ask@haitianme.com  Web: www.haitianme.com",
       centerX, // Proper centering
       footerY + 11,
       { align: "center" }
