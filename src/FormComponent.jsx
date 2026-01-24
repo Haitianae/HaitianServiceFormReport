@@ -178,9 +178,8 @@ export default function FormComponent({ onLogout, user }) {
   const [selectedTimezone, setSelectedTimezone] = useState("Asia/Dubai");
   const [downloadLoader, setDownloadLoader] = useState(false);
 
-
   const GAS_URL =
-    "https://script.google.com/macros/s/AKfycbynvZlNNwMqd1_YnFH5YpccP_YHgrGWEztHKqJdJJb82Stw2-mC9ReBd2HVoRZ2kwgc6w/exec";
+    "https://script.google.com/macros/s/AKfycbzNp3YqXktDwupvcoTd8OJXlkvRKzXSlT4VsDvkFIArVOecdGjAuYuo7-HoI3ZNOzeq/exec";
 
   const machineRegistryColumns = [
     { title: "Serial Number", dataIndex: "Serial Number" },
@@ -208,7 +207,7 @@ export default function FormComponent({ onLogout, user }) {
       // 1. General search
       const searchLower = registrySearch.toLowerCase();
       const matchesGeneral = Object.values(item).some((val) =>
-        val?.toString().toLowerCase().includes(searchLower)
+        val?.toString().toLowerCase().includes(searchLower),
       );
 
       // 2. SRN-specific search
@@ -220,7 +219,7 @@ export default function FormComponent({ onLogout, user }) {
 
       // ✅ Row must match both filters
       return matchesGeneral && matchesSRN;
-    }
+    },
   );
 
   useEffect(() => {
@@ -255,7 +254,7 @@ export default function FormComponent({ onLogout, user }) {
       .then((result) => {
         if (result.success) {
           const sorted = (result.machines || []).sort(
-            (a, b) => Number(b["Serial Number"]) - Number(a["Serial Number"])
+            (a, b) => Number(b["Serial Number"]) - Number(a["Serial Number"]),
           );
 
           setMachineRegistryData(sorted);
@@ -337,7 +336,7 @@ export default function FormComponent({ onLogout, user }) {
     worksheet["!cols"] = headers.map((h, i) => {
       const maxLen = Math.max(
         h.length,
-        ...rows.map((r) => (r[i] ? r[i].toString().length : 0))
+        ...rows.map((r) => (r[i] ? r[i].toString().length : 0)),
       );
       return { wch: maxLen + 2 };
     });
@@ -438,7 +437,7 @@ export default function FormComponent({ onLogout, user }) {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: payload.toString(),
-        }
+        },
       );
 
       const result = await res.json();
@@ -457,10 +456,10 @@ export default function FormComponent({ onLogout, user }) {
       prev
         .split("\n")
         .filter(
-          (line) => !line.startsWith("Image:") && !line.startsWith("Filename:")
+          (line) => !line.startsWith("Image:") && !line.startsWith("Filename:"),
         )
         .join("\n")
-        .trim()
+        .trim(),
     );
   };
 
@@ -473,10 +472,10 @@ export default function FormComponent({ onLogout, user }) {
       prev
         .split("\n")
         .filter(
-          (line) => !line.startsWith("Image:") && !line.startsWith("Filename:")
+          (line) => !line.startsWith("Image:") && !line.startsWith("Filename:"),
         )
         .join("\n")
-        .trim()
+        .trim(),
     );
   };
 
@@ -506,17 +505,17 @@ export default function FormComponent({ onLogout, user }) {
       prev
         .split("\n")
         .filter(
-          (line) => !line.startsWith("Image:") && !line.startsWith("Filename:")
+          (line) => !line.startsWith("Image:") && !line.startsWith("Filename:"),
         )
         .join("\n")
-        .trim()
+        .trim(),
     );
   };
 
   const saveEditTechnicianSignature = () => {
     if (editSigTechnician.current && !editSigTechnician.current.isEmpty()) {
       setEditSignatureTechnician(
-        editSigTechnician.current.getCanvas().toDataURL("image/png")
+        editSigTechnician.current.getCanvas().toDataURL("image/png"),
       );
       setIsEditTechnicianSignSaved(true);
       // message.success("Technician signature saved successfully (edit)");
@@ -558,7 +557,7 @@ export default function FormComponent({ onLogout, user }) {
   const saveEditCustomerSignature = () => {
     if (editSigCustomer.current && !editSigCustomer.current.isEmpty()) {
       setEditSignatureCustomer(
-        editSigCustomer.current.getCanvas().toDataURL("image/png")
+        editSigCustomer.current.getCanvas().toDataURL("image/png"),
       );
       setIsEditCustomerSignSaved(true);
       // message.success("Customer signature saved successfully (edit)");
@@ -674,7 +673,7 @@ export default function FormComponent({ onLogout, user }) {
       {
         method: "POST",
         body: formData,
-      }
+      },
     );
 
     const result = await res.json();
@@ -713,11 +712,11 @@ export default function FormComponent({ onLogout, user }) {
       ];
 
       const checkedReports = reportOptions.filter(
-        (option) => selectedRecord[option] === "Yes"
+        (option) => selectedRecord[option] === "Yes",
       );
 
       const checkedServices = serviceOptions.filter(
-        (option) => selectedRecord[option] === "Yes"
+        (option) => selectedRecord[option] === "Yes",
       );
 
       const parseDate = (dateStr) => dateStr || "";
@@ -736,7 +735,7 @@ export default function FormComponent({ onLogout, user }) {
         .filter(
           (line) =>
             !line.trim().startsWith("Image:") &&
-            !line.trim().startsWith("Filename:")
+            !line.trim().startsWith("Filename:"),
         )
         .join("\n");
 
@@ -800,13 +799,13 @@ export default function FormComponent({ onLogout, user }) {
                 quantity: "",
                 note: "",
               },
-            ]
+            ],
       );
     }
   }, [selectedRecord, viewModalOpen]);
   const extractDriveImagePreviewUrl = (text) => {
     const match = text.match(
-      /https:\/\/drive\.google\.com\/file\/d\/([^/]+)\//
+      /https:\/\/drive\.google\.com\/file\/d\/([^/]+)\//,
     );
     if (match && match[1]) {
       return `https://drive.google.com/uc?export=view&id=${match[1]}`;
@@ -875,17 +874,17 @@ export default function FormComponent({ onLogout, user }) {
     ];
 
     const checkedReports = reportOptions.filter(
-      (option) => selectedRecord[option] === "Yes"
+      (option) => selectedRecord[option] === "Yes",
     );
 
     const checkedServices = serviceOptions.filter(
-      (option) => selectedRecord[option] === "Yes"
+      (option) => selectedRecord[option] === "Yes",
     );
 
     const parseDate = (dateStr) => dateStr || "";
 
     const initialTechnicians = Array.isArray(
-      selectedRecord["Service Technician"]
+      selectedRecord["Service Technician"],
     )
       ? selectedRecord["Service Technician"]
       : (selectedRecord["Service Technician"] || "")
@@ -936,7 +935,7 @@ export default function FormComponent({ onLogout, user }) {
       .filter(
         (line) =>
           !line.trim().startsWith("Image:") &&
-          !line.trim().startsWith("Filename:")
+          !line.trim().startsWith("Filename:"),
       )
       .join("\n")
       .trim();
@@ -1014,7 +1013,7 @@ export default function FormComponent({ onLogout, user }) {
         const updatedRecord = finalData.find(
           (rec) =>
             rec["Service Request Number"] ===
-            selectedRecord["Service Request Number"]
+            selectedRecord["Service Request Number"],
         );
         if (updatedRecord) {
           setSelectedRecord(updatedRecord);
@@ -1067,7 +1066,8 @@ export default function FormComponent({ onLogout, user }) {
     if (searchSRN.trim()) {
       filtered = filtered.filter(
         (item) =>
-          item["Service Request Number"]?.toString().trim() === searchSRN.trim()
+          item["Service Request Number"]?.toString().trim() ===
+          searchSRN.trim(),
       );
     }
 
@@ -1095,7 +1095,7 @@ export default function FormComponent({ onLogout, user }) {
         }
 
         const uniqueSorted = Array.from(seen.values()).sort((a, b) =>
-          a["Customer Name"].localeCompare(b["Customer Name"])
+          a["Customer Name"].localeCompare(b["Customer Name"]),
         );
 
         setCustomerDataList(uniqueSorted);
@@ -1115,8 +1115,8 @@ export default function FormComponent({ onLogout, user }) {
       // );
       const res = await fetch(
         `${GAS_URL}?action=getCustomerData&name=${encodeURIComponent(
-          selectedName
-        )}`
+          selectedName,
+        )}`,
       );
       const result = await res.json();
       if (result.success) {
@@ -1185,7 +1185,7 @@ export default function FormComponent({ onLogout, user }) {
               quantity: "",
               note: "",
             },
-          ]
+          ],
     );
     setSelectedRecord(record);
     setEditModalOpen(true);
@@ -1383,7 +1383,7 @@ export default function FormComponent({ onLogout, user }) {
   const handleInputChange = (key, field, value) => {
     if (field === "quantity") {
       const updatedData = data.map((row) =>
-        row.key === key ? { ...row, [field]: value } : row
+        row.key === key ? { ...row, [field]: value } : row,
       );
       setData(updatedData);
       return;
@@ -1447,14 +1447,14 @@ export default function FormComponent({ onLogout, user }) {
     }));
 
     const updatedData = data.map((row) =>
-      row.key === key ? { ...row, [field]: stringValue } : row
+      row.key === key ? { ...row, [field]: stringValue } : row,
     );
     setData(updatedData);
   };
   const handleEditInputChange = (key, field, value) => {
     if (field === "quantity") {
       const updatedData = editTabledata.map((row) =>
-        row.key === key ? { ...row, [field]: value } : row
+        row.key === key ? { ...row, [field]: value } : row,
       );
       setEditTableData(updatedData);
       return; // Exit function early for numeric inputs
@@ -1512,7 +1512,7 @@ export default function FormComponent({ onLogout, user }) {
     }));
 
     const updatedData = editTabledata.map((row) =>
-      row.key === key ? { ...row, [field]: stringValue } : row
+      row.key === key ? { ...row, [field]: stringValue } : row,
     );
     setEditTableData(updatedData);
   };
@@ -1628,7 +1628,7 @@ export default function FormComponent({ onLogout, user }) {
           .filter(
             (line) =>
               !line.trim().startsWith("Image:") &&
-              !line.trim().startsWith("Filename:")
+              !line.trim().startsWith("Filename:"),
           )
           .join("\n")
           .trim();
@@ -1890,7 +1890,7 @@ export default function FormComponent({ onLogout, user }) {
               handleEditInputChange(
                 record.key,
                 "description",
-                record.description
+                record.description,
               )
             }
             rows={1}
@@ -2115,7 +2115,7 @@ export default function FormComponent({ onLogout, user }) {
   const saveTechnicianSignature = () => {
     if (sigTechnician.current && !sigTechnician.current.isEmpty()) {
       setSignatureTechnician(
-        sigTechnician.current.getCanvas().toDataURL("image/png")
+        sigTechnician.current.getCanvas().toDataURL("image/png"),
       );
       setIsTechnicianSignSaved(true);
       notification.success({
@@ -2156,7 +2156,7 @@ export default function FormComponent({ onLogout, user }) {
   const saveCustomerSignature = () => {
     if (sigCustomer.current && !sigCustomer.current.isEmpty()) {
       setSignatureCustomer(
-        sigCustomer.current.getCanvas().toDataURL("image/png")
+        sigCustomer.current.getCanvas().toDataURL("image/png"),
       );
       setIsCustomerSignSaved(true);
       notification.success({
@@ -2373,7 +2373,6 @@ export default function FormComponent({ onLogout, user }) {
   //   reader.readAsDataURL(pdfBlob);
   // };
 
-
   const generatePDF = async (formData, checkboxValues, partsUsed, srn) => {
     const doc = new jsPDF();
     // const startX = 10;
@@ -2416,12 +2415,12 @@ export default function FormComponent({ onLogout, user }) {
       y,
       maxWidth = 80,
       sameLine = false,
-      nextColumnX = null
+      nextColumnX = null,
     ) => {
       const labelWidth = labelWidths[label] || 30; // Label width
       const wrappedText = doc.splitTextToSize(
         value?.toString() || "N/A",
-        maxWidth
+        maxWidth,
       ); // Wrap text
 
       doc.setFontSize(10);
@@ -2464,8 +2463,14 @@ export default function FormComponent({ onLogout, user }) {
     // );
     const centX = (pageWidth - haitianLogoWidth) / 2;
     // doc.addImage(HaitianLogo, "PNG", centX, 5, 50, 15);
-    doc.addImage(HaitianLogo, "PNG", 10, 5, haitianLogoWidth, haitianLogoHeight);
-
+    doc.addImage(
+      HaitianLogo,
+      "PNG",
+      10,
+      5,
+      haitianLogoWidth,
+      haitianLogoHeight,
+    );
 
     doc.setFont("Emirates", "bold");
     doc.setFontSize(11);
@@ -2493,7 +2498,7 @@ export default function FormComponent({ onLogout, user }) {
       formData.address,
       startX,
       nextY + 5,
-      60
+      60,
     );
 
     let serialSpaceUsed = addField(
@@ -2501,7 +2506,7 @@ export default function FormComponent({ onLogout, user }) {
       formData.serialNumber,
       rightX,
       nextY + 5,
-      60
+      60,
     );
 
     nextY = 46;
@@ -2525,7 +2530,7 @@ export default function FormComponent({ onLogout, user }) {
       // formData.serviceTechnician,
       formData.serviceTechnician?.join(", "),
       startX,
-      nextY + 2
+      nextY + 2,
     );
     // nextY = 68;
     nextY = 62;
@@ -2587,7 +2592,7 @@ export default function FormComponent({ onLogout, user }) {
     nextY += 4;
     const description = doc.splitTextToSize(
       formData.description || "N/A",
-      maxWidth
+      maxWidth,
     );
     doc.text(description, startX, nextY);
     // nextY += description.length * 2;
@@ -2601,7 +2606,7 @@ export default function FormComponent({ onLogout, user }) {
     nextY += 4;
     const causeOfFailure = doc.splitTextToSize(
       formData.causeOfFailure || "N/A",
-      maxWidth
+      maxWidth,
     );
     doc.text(causeOfFailure, startX, nextY);
     // nextY += causeOfFailure.length * 2;
@@ -2630,7 +2635,7 @@ export default function FormComponent({ onLogout, user }) {
       doc.text(
         "Note",
         startX + colWidths[0] + colWidths[1] + colWidths[2] + 2,
-        nextY + 5
+        nextY + 5,
       );
 
       doc.rect(startX, nextY, colWidths[0], rowHeight);
@@ -2639,13 +2644,13 @@ export default function FormComponent({ onLogout, user }) {
         startX + colWidths[0] + colWidths[1],
         nextY,
         colWidths[2],
-        rowHeight
+        rowHeight,
       );
       doc.rect(
         startX + colWidths[0] + colWidths[1] + colWidths[2],
         nextY,
         colWidths[3],
-        rowHeight
+        rowHeight,
       );
 
       nextY += rowHeight;
@@ -2676,15 +2681,15 @@ export default function FormComponent({ onLogout, user }) {
       // Wrap text for each column
       let partNumberLines = doc.splitTextToSize(
         part.partNumber || "",
-        colWidths[0] - 5
+        colWidths[0] - 5,
       );
       let descriptionLines = doc.splitTextToSize(
         part.description || "",
-        colWidths[1] - 5
+        colWidths[1] - 5,
       );
       let quantityLines = doc.splitTextToSize(
         part.quantity?.toString() || "",
-        colWidths[2] - 5
+        colWidths[2] - 5,
       );
       let noteLines = doc.splitTextToSize(part.note || "", colWidths[3] - 5);
 
@@ -2693,7 +2698,7 @@ export default function FormComponent({ onLogout, user }) {
         partNumberLines.length,
         descriptionLines.length,
         quantityLines.length,
-        noteLines.length
+        noteLines.length,
       );
 
       // **Ensure the row limit is not exceeded**
@@ -2716,13 +2721,13 @@ export default function FormComponent({ onLogout, user }) {
           doc.text(
             quantityLines[j],
             startX + colWidths[0] + colWidths[1] + 2,
-            nextY + 5
+            nextY + 5,
           );
         if (noteLines[j])
           doc.text(
             noteLines[j],
             startX + colWidths[0] + colWidths[1] + colWidths[2] + 2,
-            nextY + 5
+            nextY + 5,
           );
         doc.setDrawColor("#0C3C74");
         // ✅ Draw borders for each row
@@ -2841,7 +2846,7 @@ export default function FormComponent({ onLogout, user }) {
           col1X,
           baseY + 2,
           signatureWidth,
-          signatureHeight
+          signatureHeight,
         );
       }
       doc.setFont("Emirates", "bold");
@@ -2857,7 +2862,7 @@ export default function FormComponent({ onLogout, user }) {
           col2X,
           baseY + 2,
           signatureWidth,
-          signatureHeight
+          signatureHeight,
         );
       } else {
         doc.text("No signature uploaded", 10, 80);
@@ -2880,7 +2885,7 @@ export default function FormComponent({ onLogout, user }) {
           col3X,
           nextY + 2,
           signatureWidth,
-          signatureHeight
+          signatureHeight,
         );
         nextY += signatureHeight + spacing;
       }
@@ -2912,7 +2917,7 @@ export default function FormComponent({ onLogout, user }) {
       "Umm El Thoub, Umm Al Quwain, United Arab Emirates",
       centerX, // Proper centering
       footerY + 6,
-      { align: "center" }
+      { align: "center" },
     );
 
     // **Third Row: Contact Information - Centered**
@@ -2920,7 +2925,7 @@ export default function FormComponent({ onLogout, user }) {
       "Phone: +971 688 457 78  Email: ask@haitianme.com  Web: www.haitianme.com",
       centerX, // Proper centering
       footerY + 11,
-      { align: "center" }
+      { align: "center" },
     );
 
     // const fileName = `HT_Service_Report_${srn || "N/A"}.pdf`;
@@ -2933,11 +2938,24 @@ export default function FormComponent({ onLogout, user }) {
       srn || "N/A"
     }.pdf`;
 
-    // doc.save("Service_Report.pdf");
+    // doc.save(fileName);
+    // const pdfBlob = doc.output("blob");
+    // await uploadPdfToDrive(pdfBlob, fileName);
+
+    // Freeze PDF
+    const pdfArrayBuffer = doc.output("arraybuffer");
+    const pdfBlob = new Blob([pdfArrayBuffer], { type: "application/pdf" });
+
+    try {
+      await uploadPdfToDrive(pdfBlob, fileName);
+    } catch (err) {
+      // console.warn("Drive upload failed:", err);
+    }
+
+    // Always download locally
     doc.save(fileName);
-    const pdfBlob = doc.output("blob");
-    await uploadPdfToDrive(pdfBlob, fileName);
   };
+
   const generateEditPDF = async (formData, checkboxValues, partsUsed) => {
     const doc = new jsPDF();
     // const startX = 10;
@@ -2980,12 +2998,12 @@ export default function FormComponent({ onLogout, user }) {
       y,
       maxWidth = 80,
       sameLine = false,
-      nextColumnX = null
+      nextColumnX = null,
     ) => {
       const labelWidth = labelWidths[label] || 30; // Label width
       const wrappedText = doc.splitTextToSize(
         value?.toString() || "N/A",
-        maxWidth
+        maxWidth,
       ); // Wrap text
 
       doc.setFontSize(10);
@@ -3027,8 +3045,14 @@ export default function FormComponent({ onLogout, user }) {
     // );
     const centX = (pageWidth - haitianLogoWidth) / 2;
     // doc.addImage(HaitianLogo, "PNG", centX, 5, 50, 15);
-    doc.addImage(HaitianLogo, "PNG", 10, 5, haitianLogoWidth, haitianLogoHeight);
-
+    doc.addImage(
+      HaitianLogo,
+      "PNG",
+      10,
+      5,
+      haitianLogoWidth,
+      haitianLogoHeight,
+    );
 
     doc.setFont("Emirates", "bold");
     doc.setFontSize(11);
@@ -3056,7 +3080,7 @@ export default function FormComponent({ onLogout, user }) {
       formData.address,
       startX,
       nextY + 5,
-      60
+      60,
     );
 
     let serialSpaceUsed = addField(
@@ -3064,7 +3088,7 @@ export default function FormComponent({ onLogout, user }) {
       formData.serialNumber,
       rightX,
       nextY + 5,
-      60
+      60,
     );
 
     nextY = 46;
@@ -3087,7 +3111,7 @@ export default function FormComponent({ onLogout, user }) {
       "Service Technician",
       formData.serviceTechnician?.join(", "),
       startX,
-      nextY + 2
+      nextY + 2,
     );
     // nextY = 68;
     nextY = 62;
@@ -3149,7 +3173,7 @@ export default function FormComponent({ onLogout, user }) {
     nextY += 4;
     const description = doc.splitTextToSize(
       formData.description || "N/A",
-      maxWidth
+      maxWidth,
     );
     doc.text(description, startX, nextY);
     // nextY += description.length * 2;
@@ -3163,7 +3187,7 @@ export default function FormComponent({ onLogout, user }) {
     nextY += 4;
     const causeOfFailure = doc.splitTextToSize(
       formData.causeOfFailure || "N/A",
-      maxWidth
+      maxWidth,
     );
     doc.text(causeOfFailure, startX, nextY);
     // nextY += causeOfFailure.length * 2;
@@ -3192,7 +3216,7 @@ export default function FormComponent({ onLogout, user }) {
       doc.text(
         "Note",
         startX + colWidths[0] + colWidths[1] + colWidths[2] + 2,
-        nextY + 5
+        nextY + 5,
       );
 
       doc.rect(startX, nextY, colWidths[0], rowHeight);
@@ -3201,13 +3225,13 @@ export default function FormComponent({ onLogout, user }) {
         startX + colWidths[0] + colWidths[1],
         nextY,
         colWidths[2],
-        rowHeight
+        rowHeight,
       );
       doc.rect(
         startX + colWidths[0] + colWidths[1] + colWidths[2],
         nextY,
         colWidths[3],
-        rowHeight
+        rowHeight,
       );
 
       nextY += rowHeight;
@@ -3238,15 +3262,15 @@ export default function FormComponent({ onLogout, user }) {
       // Wrap text for each column
       let partNumberLines = doc.splitTextToSize(
         part.partNumber || "",
-        colWidths[0] - 5
+        colWidths[0] - 5,
       );
       let descriptionLines = doc.splitTextToSize(
         part.description || "",
-        colWidths[1] - 5
+        colWidths[1] - 5,
       );
       let quantityLines = doc.splitTextToSize(
         part.quantity?.toString() || "",
-        colWidths[2] - 5
+        colWidths[2] - 5,
       );
       let noteLines = doc.splitTextToSize(part.note || "", colWidths[3] - 5);
 
@@ -3255,7 +3279,7 @@ export default function FormComponent({ onLogout, user }) {
         partNumberLines.length,
         descriptionLines.length,
         quantityLines.length,
-        noteLines.length
+        noteLines.length,
       );
 
       // **Ensure the row limit is not exceeded**
@@ -3278,13 +3302,13 @@ export default function FormComponent({ onLogout, user }) {
           doc.text(
             quantityLines[j],
             startX + colWidths[0] + colWidths[1] + 2,
-            nextY + 5
+            nextY + 5,
           );
         if (noteLines[j])
           doc.text(
             noteLines[j],
             startX + colWidths[0] + colWidths[1] + colWidths[2] + 2,
-            nextY + 5
+            nextY + 5,
           );
         doc.setDrawColor("#0C3C74");
         // ✅ Draw borders for each row
@@ -3403,7 +3427,7 @@ export default function FormComponent({ onLogout, user }) {
           col1X,
           baseY + 2,
           signatureWidth,
-          signatureHeight
+          signatureHeight,
         );
       }
       doc.setFont("Emirates", "bold");
@@ -3419,7 +3443,7 @@ export default function FormComponent({ onLogout, user }) {
           col2X,
           baseY + 2,
           signatureWidth,
-          signatureHeight
+          signatureHeight,
         );
       } else {
         doc.text("No signature uploaded", 10, 80);
@@ -3442,7 +3466,7 @@ export default function FormComponent({ onLogout, user }) {
           col3X,
           nextY + 2,
           signatureWidth,
-          signatureHeight
+          signatureHeight,
         );
         nextY += signatureHeight + spacing;
       }
@@ -3474,7 +3498,7 @@ export default function FormComponent({ onLogout, user }) {
       "Umm El Thoub, Umm Al Quwain, United Arab Emirates",
       centerX, // Proper centering
       footerY + 6,
-      { align: "center" }
+      { align: "center" },
     );
 
     // **Third Row: Contact Information - Centered**
@@ -3482,7 +3506,7 @@ export default function FormComponent({ onLogout, user }) {
       "Phone: +971 688 457 78  Email: ask@haitianme.com  Web: www.haitianme.com",
       centerX, // Proper centering
       footerY + 11,
-      { align: "center" }
+      { align: "center" },
     );
 
     // const fileName = `HT_Service_Report_${editsrn || "N/A"}.pdf`;
@@ -3496,10 +3520,22 @@ export default function FormComponent({ onLogout, user }) {
       editsrn || "N/A"
     }.pdf`;
 
-    // doc.save("Service_Report.pdf");
+    // doc.save(fileName);
+    // const editpdfBlob = doc.output("blob");
+    // await uploadPdfToDrive(editpdfBlob, fileName);
+
+    const pdfArrayBuffer = doc.output("arraybuffer");
+    const editPdfBlob = new Blob([pdfArrayBuffer], {
+      type: "application/pdf",
+    });
+
+    try {
+      await uploadPdfToDrive(editPdfBlob, fileName);
+    } catch (err) {
+      // console.warn("Edit PDF upload failed:", err);
+    }
+
     doc.save(fileName);
-    const editpdfBlob = doc.output("blob");
-    await uploadPdfToDrive(editpdfBlob, fileName);
   };
 
   useEffect(() => {
@@ -3527,7 +3563,7 @@ export default function FormComponent({ onLogout, user }) {
           "Content-Type": "application/x-www-form-urlencoded", // Set Content-Type header
         },
         body: formData,
-      }
+      },
     );
 
     const result = await res.json();
@@ -4100,7 +4136,7 @@ export default function FormComponent({ onLogout, user }) {
                   .filter(
                     (line) =>
                       !line.trim().startsWith("Image:") &&
-                      !line.trim().startsWith("Filename:")
+                      !line.trim().startsWith("Filename:"),
                   )
                   .join(" ")
                   .trim();
@@ -4146,7 +4182,7 @@ export default function FormComponent({ onLogout, user }) {
               .filter(
                 (line) =>
                   !line.trim().startsWith("Image:") &&
-                  !line.trim().startsWith("Filename:")
+                  !line.trim().startsWith("Filename:"),
               )
               .join(" ")
               .trim();
@@ -4168,8 +4204,8 @@ export default function FormComponent({ onLogout, user }) {
       exportColumns.map((col) => (typeof col === "string" ? col : col.title)),
       ...flatData.map((item) =>
         exportColumns.map(
-          (col) => item[typeof col === "string" ? col : col.key]
-        )
+          (col) => item[typeof col === "string" ? col : col.key],
+        ),
       ),
     ];
 
@@ -4253,8 +4289,8 @@ export default function FormComponent({ onLogout, user }) {
     saveAs(
       blob,
       `Haitian_Service_Report_Excel_Exported_On_${dayjs().format(
-        "DD-MM-YY_HH-mm-ss"
-      )}.xlsx`
+        "DD-MM-YY_HH-mm-ss",
+      )}.xlsx`,
     );
 
     notification.success({
@@ -4387,7 +4423,7 @@ export default function FormComponent({ onLogout, user }) {
       //   return;
       // }
 
-            if ([departureDate, returnDate].includes("N/A")) {
+      if ([departureDate, returnDate].includes("N/A")) {
         notification.error({
           message: "Error",
           description: "Please enter valid dates in DD-MM-YYYY format.",
@@ -4465,12 +4501,12 @@ export default function FormComponent({ onLogout, user }) {
       formData.append("notes", notes);
       formData.append(
         "causeOfFailure",
-        JSON.stringify({ text: causeOfFailureText })
+        JSON.stringify({ text: causeOfFailureText }),
       );
       formData.append("causeImageUrl", causeImageUrl);
       formData.append(
         "filename",
-        causeOfFailureImage?.name || "uploaded_image.png"
+        causeOfFailureImage?.name || "uploaded_image.png",
       );
       formData.append("partsUsed", JSON.stringify(cleanedPartsUsed));
 
@@ -4480,7 +4516,7 @@ export default function FormComponent({ onLogout, user }) {
           values.report?.includes(option) ||
             values.serviceType?.includes(option)
             ? "true"
-            : "false"
+            : "false",
         );
       });
 
@@ -4504,7 +4540,7 @@ export default function FormComponent({ onLogout, user }) {
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
 
       const result = await res.json();
@@ -4601,27 +4637,31 @@ export default function FormComponent({ onLogout, user }) {
       await fetchSRN();
       loadAllCustomerData();
     } catch (err) {
-   let errorMsg;
+      let errorMsg;
 
-  if (!navigator.onLine) {
-    // Browser knows it's offline
-    errorMsg = "You are offline. Please check your internet connection.";
-  } else if (err.message.includes("Failed to fetch") || err.message.includes("ERR_INTERNET_DISCONNECTED")) {
-    // Covers cases where fetch fails due to disconnection
-    errorMsg = "Network error: Unable to reach the server. Please check your connection.";
-  } else {
-    // Fallback: show the real error
-    errorMsg = err.message || "Unknown error occurred.";
-  }
+      if (!navigator.onLine) {
+        // Browser knows it's offline
+        errorMsg = "You are offline. Please check your internet connection.";
+      } else if (
+        err.message.includes("Failed to fetch") ||
+        err.message.includes("ERR_INTERNET_DISCONNECTED")
+      ) {
+        // Covers cases where fetch fails due to disconnection
+        errorMsg =
+          "Network error: Unable to reach the server. Please check your connection.";
+      } else {
+        // Fallback: show the real error
+        errorMsg = err.message || "Unknown error occurred.";
+      }
 
-  notification.error({
-    message: "Error",
-    description: errorMsg,
-    placement: "bottomRight",
-    duration: 0,
-  });
+      notification.error({
+        message: "Error",
+        description: errorMsg,
+        placement: "bottomRight",
+        duration: 0,
+      });
 
-  // console.error("Form submission failed:", err);
+      // console.error("Form submission failed:", err);
     } finally {
       setLoading(false);
       setIsSubmitting(false);
@@ -4732,7 +4772,7 @@ export default function FormComponent({ onLogout, user }) {
                 action: "deleteCauseImage",
                 imageUrl: editViewUrl,
               }),
-            }
+            },
           );
 
           const result = await deleteRes.json();
@@ -4810,7 +4850,7 @@ export default function FormComponent({ onLogout, user }) {
       formData.append("returnDate", returnDate);
       formData.append(
         "description",
-        values["description of work/of defect/failure mode"]
+        values["description of work/of defect/failure mode"],
       );
       formData.append("notes", values["notes/further action required"]);
       formData.append("causeOfFailure", updatedCauseText);
@@ -4826,14 +4866,14 @@ export default function FormComponent({ onLogout, user }) {
       reportOptions.forEach((option) => {
         formData.append(
           option,
-          values.report?.includes(option) ? "true" : "false"
+          values.report?.includes(option) ? "true" : "false",
         );
       });
 
       serviceOptions.forEach((option) => {
         formData.append(
           option,
-          values.serviceType?.includes(option) ? "true" : "false"
+          values.serviceType?.includes(option) ? "true" : "false",
         );
       });
 
@@ -4892,25 +4932,25 @@ export default function FormComponent({ onLogout, user }) {
       //   description: "Failed to submit update: " + err.message,
       //   placement: "bottomRight",
       // });
-       let errorMsg;
+      let errorMsg;
 
-  if (!navigator.onLine) {
-    errorMsg = "You are offline. Please check your internet connection.";
-  } else if (
-    err.message.includes("Failed to fetch") ||
-    err.message.includes("ERR_INTERNET_DISCONNECTED")
-  ) {
-    errorMsg = "Network error: Unable to reach the server. Please try again later.";
-  } else {
-    errorMsg = err?.message || "Unknown error occurred.";
-  }
+      if (!navigator.onLine) {
+        errorMsg = "You are offline. Please check your internet connection.";
+      } else if (
+        err.message.includes("Failed to fetch") ||
+        err.message.includes("ERR_INTERNET_DISCONNECTED")
+      ) {
+        errorMsg =
+          "Network error: Unable to reach the server. Please try again later.";
+      } else {
+        errorMsg = err?.message || "Unknown error occurred.";
+      }
 
-  notification.error({
-    message: "Error",
-    description: errorMsg,
-    placement: "bottomRight",
-  });
-
+      notification.error({
+        message: "Error",
+        description: errorMsg,
+        placement: "bottomRight",
+      });
     } finally {
       setIsEditSubmitting(false);
       setEditLoading(false);
@@ -4924,7 +4964,7 @@ export default function FormComponent({ onLogout, user }) {
       {
         method: "POST",
         body: formData,
-      }
+      },
     );
     const result = await res.json();
     if (result.success) {
@@ -4953,7 +4993,7 @@ export default function FormComponent({ onLogout, user }) {
       {
         method: "POST",
         body: new URLSearchParams(payload),
-      }
+      },
     );
 
     const result = await res.json();
@@ -4984,7 +5024,7 @@ export default function FormComponent({ onLogout, user }) {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: payload.toString(),
-      }
+      },
     );
 
     const result = await res.json();
@@ -5016,7 +5056,7 @@ export default function FormComponent({ onLogout, user }) {
             "Content-Type": "application/x-www-form-urlencoded",
           },
           body: payload.toString(),
-        }
+        },
       );
       const result = await res.json();
       if (result.success && result.url) {
@@ -5034,7 +5074,7 @@ export default function FormComponent({ onLogout, user }) {
         description: "Error fetching PDF link.",
         placement: "bottomRight",
       });
-    }finally{
+    } finally {
       setDownloadLoader(false);
     }
   };
@@ -5247,7 +5287,8 @@ export default function FormComponent({ onLogout, user }) {
                               .map((item) => item["Customer Name"])
                               .filter(
                                 (name) =>
-                                  typeof name === "string" && name.trim() !== ""
+                                  typeof name === "string" &&
+                                  name.trim() !== "",
                               )
                               .filter(
                                 (name, index, self) =>
@@ -5255,11 +5296,13 @@ export default function FormComponent({ onLogout, user }) {
                                     (n) =>
                                       typeof n === "string" &&
                                       n.toLowerCase().trim() ===
-                                        name.toLowerCase().trim()
-                                  ) === index
+                                        name.toLowerCase().trim(),
+                                  ) === index,
                               )
                               .filter((name) =>
-                                name.toLowerCase().includes(value.toLowerCase())
+                                name
+                                  .toLowerCase()
+                                  .includes(value.toLowerCase()),
                               )
                               .sort((a, b) => a.localeCompare(b));
 
