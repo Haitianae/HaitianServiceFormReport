@@ -22,7 +22,6 @@ import {
   notification,
   Avatar,
   Dropdown,
-  Menu,
 } from "antd";
 import { UserOutlined, MailOutlined, LogoutOutlined } from "@ant-design/icons";
 
@@ -57,7 +56,6 @@ import isBetween from "dayjs/plugin/isBetween";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx-js-style";
-import { FOCUSABLE_SELECTOR } from "@testing-library/user-event/dist/utils";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -97,7 +95,8 @@ const technicianOptions = [
 const serviceOptions = [
   "F.O.C Commissioning",
   "F.O.C Maintenance",
-  "Guarantee",
+  // "Guarantee",
+  "Warranty Service",
   "Chargeable Maintenance",
   // "Customer Visit",
   "Customer Visit (Service)",
@@ -179,7 +178,7 @@ export default function FormComponent({ onLogout, user }) {
   const [downloadLoader, setDownloadLoader] = useState(false);
 
   const GAS_URL =
-    "https://script.google.com/macros/s/AKfycbzNp3YqXktDwupvcoTd8OJXlkvRKzXSlT4VsDvkFIArVOecdGjAuYuo7-HoI3ZNOzeq/exec";
+    "https://script.google.com/macros/s/AKfycbyvz00spk0eZBAZRViqOWBm7HkrO5MSXNDDH71mBhDFbeczAia4IKZKNs3xc45koBXr5Q/exec";
 
   const machineRegistryColumns = [
     { title: "Serial Number", dataIndex: "Serial Number" },
@@ -705,7 +704,8 @@ export default function FormComponent({ onLogout, user }) {
         "F.O.C Maintenance",
         "Chargeable Maintenance",
         "Goodwill",
-        "Guarantee",
+        // "Guarantee",
+        "Warranty Service",
         "Service contract",
         "Customer Visit (Service)",
         "Installation/Commission",
@@ -867,7 +867,8 @@ export default function FormComponent({ onLogout, user }) {
       "F.O.C Maintenance",
       "Chargeable Maintenance",
       "Goodwill",
-      "Guarantee",
+      // "Guarantee",
+      "Warranty Service",
       "Service contract",
       "Customer Visit (Service)",
       "Installation/Commission",
@@ -1578,6 +1579,21 @@ export default function FormComponent({ onLogout, user }) {
     return typeof dateStr === "string" && dateStr.trim() ? dateStr.trim() : "";
   };
 
+  const formatDDMMYYYY = (value = "") => {
+    // remove everything except numbers
+    let digits = value.replace(/\D/g, "").slice(0, 8);
+
+    if (digits.length >= 5) {
+      return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
+    }
+
+    if (digits.length >= 3) {
+      return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    }
+
+    return digits;
+  };
+
   const Tablecolumns = [
     { title: "Service Request Number", dataIndex: "Service Request Number" },
     { title: "Customer Name", dataIndex: "Customer Name" },
@@ -1643,7 +1659,9 @@ export default function FormComponent({ onLogout, user }) {
     { title: "Note", dataIndex: "Note" },
     { title: "F.O.C Commissioning", dataIndex: "F.O.C Commissioning" },
     { title: "F.O.C Maintenance", dataIndex: "F.O.C Maintenance" },
-    { title: "Guarantee", dataIndex: "Guarantee" },
+    // { title: "Guarantee", dataIndex: "Guarantee" },
+    { title: "Warranty Service", dataIndex: "Warranty Service" },
+
     {
       title: "Chargeable Maintenance",
       dataIndex: "Chargeable Maintenance",
@@ -2759,10 +2777,11 @@ export default function FormComponent({ onLogout, user }) {
     const serviceOptionSpacing = {
       "F.O.C Commissioning": 33,
       "F.O.C Maintenance": 28,
-      Guarantee: 26,
-      "Chargeable Commissioning": 33,
-      "Customer Visit  (Service)": 25,
-      "Service contract": 21,
+      // Guarantee: 26,
+      "Warranty Service": 27,
+      "Chargeable Maintenance": 27,
+      "Customer Visit (Service)": 27,
+      "Service contract": 25,
       Goodwill: 25,
     };
 
@@ -2803,7 +2822,7 @@ export default function FormComponent({ onLogout, user }) {
 
       // Draw text below the checkbox
       let textY = checkboxY + 5;
-      if (option === "Guarantee" || option === "Goodwill") {
+      if (option === "Warranty Service" || option === "Goodwill") {
         textY += 1; // Adjust to center text manually
       }
       wrappedText.forEach((line, index) => {
@@ -3340,10 +3359,11 @@ export default function FormComponent({ onLogout, user }) {
     const serviceOptionSpacing = {
       "F.O.C Commissioning": 33,
       "F.O.C Maintenance": 28,
-      Guarantee: 26,
-      "Chargeable Maintenance": 33,
-      "Customer Visit  (Service)": 25,
-      "Service contract": 21,
+      // Guarantee: 26,
+      "Warranty Service": 27,
+      "Chargeable Maintenance": 27,
+      "Customer Visit  (Service)": 27,
+      "Service contract": 25,
       Goodwill: 25,
     };
 
@@ -3384,7 +3404,7 @@ export default function FormComponent({ onLogout, user }) {
 
       // Draw text below the checkbox
       let textY = checkboxY + 5;
-      if (option === "Guarantee" || option === "Goodwill") {
+      if (option === "Warranty Service" || option === "Goodwill") {
         textY += 1; // Adjust to center text manually
       }
       wrappedText.forEach((line, index) => {
@@ -3596,7 +3616,8 @@ export default function FormComponent({ onLogout, user }) {
     "Note",
     "F.O.C Commissioning",
     "F.O.C Maintenance",
-    "Guarantee",
+    // "Guarantee",
+    "Warranty Service",
     "Chargeable Maintenance",
     "Customer Visit (Service)",
     "Service contract",
@@ -4261,7 +4282,8 @@ export default function FormComponent({ onLogout, user }) {
       Note: 40,
       "F.O.C Commissioning": 40,
       "F.O.C Maintenance": 40,
-      Guarantee: 25,
+      // Guarantee: 25,
+      "Warranty Service": 26,
       "Chargeable Maintenance": 40,
       "Customer Visit (Service)": 50,
       "Service contract": 40,
@@ -5479,11 +5501,17 @@ export default function FormComponent({ onLogout, user }) {
                         <Input
                           placeholder="DD-MM-YYYY"
                           value={form.getFieldValue("installationDate") || ""}
-                          onChange={(e) =>
+                          // onChange={(e) =>
+                          //   form.setFieldsValue({
+                          //     installationDate: e.target.value,
+                          //   })
+                          // }
+                          onChange={(e) => {
+                            const formatted = formatDDMMYYYY(e.target.value);
                             form.setFieldsValue({
-                              installationDate: e.target.value,
-                            })
-                          }
+                              installationDate: formatted,
+                            });
+                          }}
                         />
                       </Form.Item>
 
@@ -5551,11 +5579,15 @@ export default function FormComponent({ onLogout, user }) {
                         <Input
                           placeholder="DD-MM-YYYY"
                           value={form.getFieldValue("departureDate") || ""}
-                          onChange={(e) =>
-                            form.setFieldsValue({
-                              departureDate: e.target.value,
-                            })
-                          }
+                          // onChange={(e) =>
+                          //   form.setFieldsValue({
+                          //     departureDate: e.target.value,
+                          //   })
+                          // }
+                          onChange={(e) => {
+                            const formatted = formatDDMMYYYY(e.target.value);
+                            form.setFieldsValue({ departureDate: formatted });
+                          }}
                         />
                       </Form.Item>
                     </div>
@@ -5579,9 +5611,13 @@ export default function FormComponent({ onLogout, user }) {
                         <Input
                           placeholder="DD-MM-YYYY"
                           value={form.getFieldValue("returnDate") || ""}
-                          onChange={(e) =>
-                            form.setFieldsValue({ returnDate: e.target.value })
-                          }
+                          // onChange={(e) =>
+                          //   form.setFieldsValue({ returnDate: e.target.value })
+                          // }
+                          onChange={(e) => {
+                            const formatted = formatDDMMYYYY(e.target.value);
+                            form.setFieldsValue({ returnDate: formatted });
+                          }}
                         />
                       </Form.Item>
                     </div>
@@ -6300,11 +6336,17 @@ export default function FormComponent({ onLogout, user }) {
                       <Input
                         placeholder="DD-MM-YYYY"
                         value={editForm.getFieldValue("installationDate") || ""}
-                        onChange={(e) =>
+                        // onChange={(e) =>
+                        //   editForm.setFieldsValue({
+                        //     installationDate: e.target.value,
+                        //   })
+                        // }
+                        onChange={(e) => {
+                          const formatted = formatDDMMYYYY(e.target.value);
                           editForm.setFieldsValue({
-                            installationDate: e.target.value,
-                          })
-                        }
+                            installationDate: formatted,
+                          });
+                        }}
                       />
                     </Form.Item>
 
@@ -6379,11 +6421,15 @@ export default function FormComponent({ onLogout, user }) {
                       <Input
                         placeholder="DD-MM-YYYY"
                         value={editForm.getFieldValue("departureDate") || ""}
-                        onChange={(e) =>
-                          editForm.setFieldsValue({
-                            departureDate: e.target.value,
-                          })
-                        }
+                        // onChange={(e) =>
+                        //   editForm.setFieldsValue({
+                        //     departureDate: e.target.value,
+                        //   })
+                        // }
+                        onChange={(e) => {
+                          const formatted = formatDDMMYYYY(e.target.value);
+                          editForm.setFieldsValue({ departureDate: formatted });
+                        }}
                       />
                     </Form.Item>
                   </div>
@@ -6404,11 +6450,16 @@ export default function FormComponent({ onLogout, user }) {
                       <Input
                         placeholder="DD-MM-YYYY"
                         value={editForm.getFieldValue("returnDate") || ""}
-                        onChange={(e) =>
-                          editForm.setFieldsValue({
-                            returnDate: e.target.value,
-                          })
-                        }
+                        // onChange={(e) =>
+                        //   editForm.setFieldsValue({
+                        //     returnDate: e.target.value,
+                        //   })
+                        // }
+
+                        onChange={(e) => {
+                          const formatted = formatDDMMYYYY(e.target.value);
+                          editForm.setFieldsValue({ returnDate: formatted });
+                        }}
                       />
                     </Form.Item>
                   </div>
