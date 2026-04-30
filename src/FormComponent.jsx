@@ -178,7 +178,7 @@ export default function FormComponent({ onLogout, user }) {
   const [downloadLoader, setDownloadLoader] = useState(false);
 
   const GAS_URL =
-    "https://script.google.com/macros/s/AKfycbyvz00spk0eZBAZRViqOWBm7HkrO5MSXNDDH71mBhDFbeczAia4IKZKNs3xc45koBXr5Q/exec";
+  "https://script.google.com/macros/s/AKfycbyYDqamvBY4_hsGHE0wTyimed-bl5T7hu_lReF4TnNCvOs36VYQ9eepxDhwCJYSNWyANg/exec";
 
   const machineRegistryColumns = [
     { title: "Serial Number", dataIndex: "Serial Number" },
@@ -2469,8 +2469,8 @@ export default function FormComponent({ onLogout, user }) {
 
     const machineLogoWidth = 65;
     const machineLogoHeight = 40;
-    const haitianLogoWidth = 50;
-    const haitianLogoHeight = 15;
+    const haitianLogoWidth = 52;
+    const haitianLogoHeight = 17;
     // doc.addImage(
     //   HaitianMachine,
     //   "PNG",
@@ -2928,7 +2928,7 @@ export default function FormComponent({ onLogout, user }) {
     doc.line(10, lineY, doc.internal.pageSize.width - 10, lineY);
     doc.setFont("Emirates", "bold");
     doc.setFontSize(13);
-    doc.text("Haitian Middle East", centerX, footerY + 1, { align: "center" });
+    doc.text("Haitian Middle East LLC", centerX, footerY + 1, { align: "center" });
 
     doc.setFontSize(9);
     doc.text(
@@ -2941,7 +2941,7 @@ export default function FormComponent({ onLogout, user }) {
 
     // **Third Row: Contact Information - Centered**
     doc.text(
-      "Phone: +971 688 457 78  Email: ask@haitianme.com  Web: www.haitianme.com",
+      "Phone: +971 688 457 78  Email: ask@haitianmea.com  Web: www.haitianmea.com",
       centerX, // Proper centering
       footerY + 11,
       { align: "center" },
@@ -3052,8 +3052,8 @@ export default function FormComponent({ onLogout, user }) {
 
     const machineLogoWidth = 65;
     const machineLogoHeight = 40;
-    const haitianLogoWidth = 50;
-    const haitianLogoHeight = 15;
+    const haitianLogoWidth = 52;
+    const haitianLogoHeight = 17;
     // doc.addImage(
     //   HaitianMachine,
     //   "PNG",
@@ -3510,7 +3510,7 @@ export default function FormComponent({ onLogout, user }) {
     doc.line(10, lineY, doc.internal.pageSize.width - 10, lineY);
     doc.setFont("Emirates", "bold");
     doc.setFontSize(13);
-    doc.text("Haitian Middle East", centerX, footerY + 1, { align: "center" });
+    doc.text("Haitian Middle East LLC", centerX, footerY + 1, { align: "center" });
 
     doc.setFontSize(9);
     doc.text(
@@ -3523,7 +3523,7 @@ export default function FormComponent({ onLogout, user }) {
 
     // **Third Row: Contact Information - Centered**
     doc.text(
-      "Phone: +971 688 457 78  Email: ask@haitianme.com  Web: www.haitianme.com",
+      "Phone: +971 688 457 78  Email: ask@haitianmea.com  Web: www.haitianmea.com",
       centerX, // Proper centering
       footerY + 11,
       { align: "center" },
