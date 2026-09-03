@@ -88,7 +88,7 @@ const technicianOptions = [
   "Karpagaraj",
   "Balaji",
   "Eswar",
-  "SivaSundar",
+  "Ganesh",
   "Sunderesh",
 ];
 
@@ -2941,8 +2941,8 @@ export default function FormComponent({ onLogout, user }) {
 
     // **Third Row: Contact Information - Centered**
     doc.text(
-      "Phone: +971 688 457 78  Email: ask@haitianmea.com  Web: www.haitianmea.com",
-      centerX, // Proper centering
+      "Tel: +971 688 457 78  Mob: +971 58 555 7475  Email: ask@haitianme.com  Web: www.haitianme.com",
+      centerX - 3, // Proper centering
       footerY + 11,
       { align: "center" },
     );
@@ -3523,8 +3523,9 @@ export default function FormComponent({ onLogout, user }) {
 
     // **Third Row: Contact Information - Centered**
     doc.text(
-      "Phone: +971 688 457 78  Email: ask@haitianmea.com  Web: www.haitianmea.com",
-      centerX, // Proper centering
+      // "Phone: +971 688 457 78  Email: ask@haitianmea.com  Web: www.haitianmea.com",
+    "Tel: +971 688 457 78  Mob: +971 58 555 7475  Email: ask@haitianme.com  Web: www.haitianme.com",
+      centerX - 3, // Proper centering
       footerY + 11,
       { align: "center" },
     );
@@ -6384,7 +6385,7 @@ export default function FormComponent({ onLogout, user }) {
                           "Karpagaraj",
                           "Balaji",
                           "Eswar",
-                          "SivaSundar",
+                          "Ganesh",
                           "Sunderesh",
                         ].map((tech) => (
                           <Select.Option
