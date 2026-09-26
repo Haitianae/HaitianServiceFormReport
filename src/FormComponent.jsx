@@ -167,7 +167,8 @@ export default function FormComponent({ onLogout, user }) {
   };
   const [isTechnicianSignSaved, setIsTechnicianSignSaved] = useState(false);
   const [isCustomerSignSaved, setIsCustomerSignSaved] = useState(false);
-  const [isManagerSignUploaded, setIsManagerSignUploaded] = useState(false);
+  // const [isManagerSignUploaded, setIsManagerSignUploaded] = useState(false);
+  const [isManagerSignSaved, setIsManagerSignSaved] = useState(false);
   const [selectedEditTechnicians, setSelectedEditTechnicians] = useState([]);
   const [open, setOpen] = useState(false);
   const [machineRegistryLoading, setMachineRegistryLoading] = useState(false);
@@ -178,7 +179,7 @@ export default function FormComponent({ onLogout, user }) {
   const [downloadLoader, setDownloadLoader] = useState(false);
 
   const GAS_URL =
-  "https://script.google.com/macros/s/AKfycbyYDqamvBY4_hsGHE0wTyimed-bl5T7hu_lReF4TnNCvOs36VYQ9eepxDhwCJYSNWyANg/exec";
+  "https://script.google.com/macros/s/AKfycbyQd4AsrI4DDBaAEn2g0lvaRCmAz6mGUT1pLXvNVQPPJZsSMkWDP-s5-_-rI45bkhPuWA/exec";
 
   const machineRegistryColumns = [
     { title: "Serial Number", dataIndex: "Serial Number" },
@@ -595,30 +596,68 @@ export default function FormComponent({ onLogout, user }) {
     }
   };
 
-  const handleEditManagerUpload = ({ file }) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setEditSignatureManager(reader.result);
-      setIsEditManagerSignSaved(true);
-      // message.success("Manager signature uploaded successfully (edit)");
-      notification.success({
-        message: "Success",
-        description: "Manager signature uploaded successfully (edit).",
-        placement: "bottomRight",
-      });
-    };
-    if (file) reader.readAsDataURL(file);
-  };
+  // const handleEditManagerUpload = ({ file }) => {
+  //   const reader = new FileReader();
+  //   reader.onloadend = () => {
+  //     setEditSignatureManager(reader.result);
+  //     setIsEditManagerSignSaved(true);
+  //     // message.success("Manager signature uploaded successfully (edit)");
+  //     notification.success({
+  //       message: "Success",
+  //       description: "Manager signature uploaded successfully (edit).",
+  //       placement: "bottomRight",
+  //     });
+  //   };
+  //   if (file) reader.readAsDataURL(file);
+  // };
 
-  const clearEditManagerSignature = () => {
-    setEditSignatureManager(null);
-    setIsEditManagerSignSaved(false);
+  // const clearEditManagerSignature = () => {
+  //   setEditSignatureManager(null);
+  //   setIsEditManagerSignSaved(false);
+  //   notification.success({
+  //     message: "Success",
+  //     description: "Manager signature was cleared (edit).",
+  //     placement: "bottomRight",
+  //   });
+  // };
+
+  // Service Manager Signature - Edit
+const saveEditManagerSignature = () => {
+  if (editSigManager.current && !editSigManager.current.isEmpty()) {
+    setEditSignatureManager(
+      editSigManager.current.getCanvas().toDataURL("image/png")
+    );
+
+    setIsEditManagerSignSaved(true);
+
     notification.success({
       message: "Success",
-      description: "Manager signature was cleared (edit).",
+      description: "Manager signature saved successfully!",
       placement: "bottomRight",
     });
-  };
+  } else {
+    notification.error({
+      message: "Error",
+      description: "Please draw the manager signature before saving.",
+      placement: "bottomRight",
+    });
+  }
+};
+
+const clearEditManagerSignature = () => {
+  if (editSigManager.current && !editSigManager.current.isEmpty()) {
+    editSigManager.current.clear();
+  }
+
+  setEditSignatureManager("");
+  setIsEditManagerSignSaved(false);
+
+  notification.success({
+    message: "Success",
+    description: "Manager signature cleared successfully!",
+    placement: "bottomRight",
+  });
+};
 
   const handleCauseImageUpload = ({ file }) => {
     // ✅ Reject files over 3MB
@@ -2085,39 +2124,40 @@ export default function FormComponent({ onLogout, user }) {
   const sigCustomer = useRef();
 
   const [signatureTechnician, setSignatureTechnician] = useState("");
-  const [signatureManager, setSignatureManager] = useState(null);
+  // const [signatureManager, setSignatureManager] = useState(null);
+  const [signatureManager, setSignatureManager] = useState("");
 
   const [signatureCustomer, setSignatureCustomer] = useState("");
 
-  const handleUpload = ({ file }) => {
-    const reader = new FileReader();
+  // const handleUpload = ({ file }) => {
+  //   const reader = new FileReader();
 
-    reader.onloadend = () => {
-      // console.log("Uploaded Image (Base64):", reader.result);
-      setSignatureManager(reader.result);
-      setIsManagerSignUploaded(true);
-      // message.success("Manager Signature uploaded successfully!");
-      notification.success({
-        message: "Success",
-        description: "Manager Signature uploaded successfully!",
-        placement: "bottomRight",
-      });
-    };
+  //   reader.onloadend = () => {
+  //     // console.log("Uploaded Image (Base64):", reader.result);
+  //     setSignatureManager(reader.result);
+  //     setIsManagerSignUploaded(true);
+  //     // message.success("Manager Signature uploaded successfully!");
+  //     notification.success({
+  //       message: "Success",
+  //       description: "Manager Signature uploaded successfully!",
+  //       placement: "bottomRight",
+  //     });
+  //   };
 
-    if (file) {
-      reader.readAsDataURL(file);
-    }
-  };
+  //   if (file) {
+  //     reader.readAsDataURL(file);
+  //   }
+  // };
 
-  const clearManagerSignature = () => {
-    setSignatureManager(null);
-    setIsManagerSignUploaded(false);
-    notification.success({
-      message: "Success",
-      description: "Manager signature removed successfully!",
-      placement: "bottomRight",
-    });
-  };
+  // const clearManagerSignature = () => {
+  //   setSignatureManager(null);
+  //   setIsManagerSignUploaded(false);
+  //   notification.success({
+  //     message: "Success",
+  //     description: "Manager signature removed successfully!",
+  //     placement: "bottomRight",
+  //   });
+  // };
 
   const updateCanvasSize = () => {
     setCanvasSize({ width: window.innerWidth < 768 ? 300 : 400, height: 200 });
@@ -2128,6 +2168,46 @@ export default function FormComponent({ onLogout, user }) {
     window.addEventListener("resize", updateCanvasSize);
     return () => window.removeEventListener("resize", updateCanvasSize);
   }, []);
+
+
+// Service Manager Signature
+const saveManagerSignature = () => {
+  if (sigManager.current && !sigManager.current.isEmpty()) {
+    setSignatureManager(
+      sigManager.current.getCanvas().toDataURL("image/png")
+    );
+
+    setIsManagerSignSaved(true);
+
+    notification.success({
+      message: "Success",
+      description: "Manager signature saved successfully!",
+      placement: "bottomRight",
+    });
+  } else {
+    notification.error({
+      message: "Error",
+      description: "Please draw the manager signature before saving.",
+      placement: "bottomRight",
+    });
+  }
+};
+
+const clearManagerSignature = () => {
+  if (sigManager.current && !sigManager.current.isEmpty()) {
+    sigManager.current.clear();
+  }
+
+  setSignatureManager("");
+  setIsManagerSignSaved(false);
+
+  notification.success({
+    message: "Success",
+    description: "Manager signature cleared successfully!",
+    placement: "bottomRight",
+  });
+};
+
 
   // Service Technician Signature
   const saveTechnicianSignature = () => {
@@ -4396,12 +4476,12 @@ export default function FormComponent({ onLogout, user }) {
       if (
         !isTechnicianSignSaved ||
         !isCustomerSignSaved ||
-        !isManagerSignUploaded
+        !isManagerSignSaved
       ) {
         notification.error({
           message: "Error",
           description:
-            "Please ensure the manager's signature is uploaded, and the technician's and customer's signatures are saved before submitting.",
+            "Please ensure the manager's, technician's and customer's signatures are saved before submitting.",
           placement: "bottomRight",
         });
         stopSubmitting();
@@ -4654,7 +4734,7 @@ export default function FormComponent({ onLogout, user }) {
       setSignatureManager(null);
       setIsTechnicianSignSaved(false);
       setIsCustomerSignSaved(false);
-      setIsManagerSignUploaded(false);
+      setIsManagerSignSaved(false);
       setStartTime(null);
 
       await fetchSRN();
@@ -4735,7 +4815,7 @@ export default function FormComponent({ onLogout, user }) {
 
       const technicianCanvasEmpty = editSigTechnician.current?.isEmpty?.();
       const customerCanvasEmpty = editSigCustomer.current?.isEmpty?.();
-      const managerEmpty = !editSignatureManager;
+const managerCanvasEmpty = editSigManager.current?.isEmpty?.();
 
       if (
         !isEditTechnicianSignSaved ||
@@ -4743,12 +4823,12 @@ export default function FormComponent({ onLogout, user }) {
         !isEditCustomerSignSaved ||
         customerCanvasEmpty ||
         !isEditManagerSignSaved ||
-        managerEmpty
+  managerCanvasEmpty
       ) {
         notification.error({
           message: "Error",
           description:
-            "The manager's signature must be uploaded. The technician's and customer's signatures must be saved before submitting.",
+            "The manager's, technician's and customer's signatures must be saved before submitting.",
           placement: "bottomRight",
         });
 
@@ -4947,7 +5027,7 @@ export default function FormComponent({ onLogout, user }) {
       editSigTechnician.current?.clear();
       editSigManager.current?.clear();
       editSigCustomer.current?.clear();
-      setEditSignatureManager(null);
+      setEditSignatureManager("");
       loadAllCustomerData();
     } catch (err) {
       // notification.error({
@@ -5782,7 +5862,7 @@ export default function FormComponent({ onLogout, user }) {
                       </Form.Item>
                     </div>
 
-                    <div className="col-12 col-lg-6 col-xl-4 mt-2 d-flex justify-content-center">
+                 {/*    <div className="col-12 col-lg-6 col-xl-4 mt-2 d-flex justify-content-center">
                       <div>
                         <Form.Item
                           label="Signature of Service Manager"
@@ -5829,7 +5909,6 @@ export default function FormComponent({ onLogout, user }) {
                             )}
                           </div>
 
-                          {/* Clear Button (Only visible when image is uploaded) */}
                           {signatureManager && (
                             <Button
                               type="primary"
@@ -5843,7 +5922,44 @@ export default function FormComponent({ onLogout, user }) {
                           )}
                         </Form.Item>
                       </div>
-                    </div>
+                    </div> */}
+
+                    <div className="col-12 col-lg-6 col-xl-4 mt-2 d-flex justify-content-center">
+  <Form.Item
+    label="Signature of Service Manager"
+    name="serviceManagerSignature"
+    required
+  >
+    <SignatureCanvas
+      ref={sigManager}
+      penColor="black"
+      canvasProps={{
+        width: canvasSize.width,
+        height: canvasSize.height,
+        className: "signatureborder",
+      }}
+    />
+
+    <div className="d-flex justify-content-start justify-content-md-start justify-content-lg-start gap-2 mt-1">
+      <Button
+        className="haitianbutton"
+        onClick={saveManagerSignature}
+        disabled={isSubmitting}
+      >
+        Save Signature
+      </Button>
+
+      <Button
+        className="dangerbutton"
+        danger
+        onClick={clearManagerSignature}
+        disabled={isSubmitting}
+      >
+        Clear
+      </Button>
+    </div>
+  </Form.Item>
+</div>
 
                     {/* Customer Signature */}
                     <div className="col-12 col-lg-6 col-xl-4  mt-2 d-flex justify-content-center">
@@ -6669,7 +6785,7 @@ export default function FormComponent({ onLogout, user }) {
                     </Form.Item>
                   </div>
 
-                  <div className="col-12 col-lg-6 col-xl-4 mt-2 d-flex justify-content-center">
+                  {/* <div className="col-12 col-lg-6 col-xl-4 mt-2 d-flex justify-content-center">
                     <div>
                       <Form.Item
                         label="Signature of Service Manager"
@@ -6729,7 +6845,45 @@ export default function FormComponent({ onLogout, user }) {
                         )}
                       </Form.Item>
                     </div>
-                  </div>
+                  </div> */}
+
+
+                  <div className="col-12 col-lg-6 col-xl-4 mt-2 d-flex justify-content-center">
+  <Form.Item
+    label="Signature of Service Manager"
+    name="serviceManagerSignature"
+    required
+  >
+    <SignatureCanvas
+      ref={editSigManager}
+      penColor="black"
+      canvasProps={{
+        width: canvasSize.width,
+        height: canvasSize.height,
+        className: "signatureborder",
+      }}
+    />
+
+    <div className="d-flex justify-content-start justify-content-md-start justify-content-lg-start gap-2 mt-1">
+      <Button
+        className="haitianbutton"
+        onClick={saveEditManagerSignature}
+        disabled={isEditSubmitting}
+      >
+        Save Signature
+      </Button>
+
+      <Button
+        className="dangerbutton"
+        danger
+        onClick={clearEditManagerSignature}
+        disabled={isEditSubmitting}
+      >
+        Clear
+      </Button>
+    </div>
+  </Form.Item>
+</div>
 
                   {/* Customer Signature */}
                   <div className="col-12 col-lg-6 col-xl-4  mt-2 d-flex justify-content-center">
